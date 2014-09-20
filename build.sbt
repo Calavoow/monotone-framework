@@ -1,4 +1,4 @@
-name := "assig1"
+name := "monotone-frameworks"
 
 version := "1.0"
 
