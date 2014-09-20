@@ -17,62 +17,62 @@ object WhileParser extends RegexParsers {
 
 	def term : Parser[AExp] = (
 		("(" ~> aExp <~ ")")
-		| (identifier ^^ Ref)
-		| (integer ^^ INT)
+			| (identifier ^^ Ref)
+			| (integer ^^ INT)
 	)
 
-  def mkTreeArithmatic(input: AExp ~ List[String ~ AExp]): AExp = {
-    def combine(acc: AExp, next: String ~ AExp) = {
-      next match {
-        case op ~ y => BinOp(op, acc, y)
-      }
-    }
+	def mkTreeArithmatic(input: AExp ~ List[String ~ AExp]): AExp = {
+		def combine(acc: AExp, next: String ~ AExp) = {
+			next match {
+				case op ~ y => BinOp(op, acc, y)
+			}
+		}
 
-    input match {
-      case first ~ rest => ((first: AExp) /: rest)(combine)
-    }
-  }
+		input match {
+			case first ~ rest => ((first: AExp) /: rest)(combine)
+		}
+	}
 
 	def bExp: Parser[BExp] = (
 		binTerm ~ (op_b ~ binTerm).* ^^ mkTreeBoolean
-		| "not" ~> bExp ^^ {case e => Not(e)}
+			| "not" ~> bExp ^^ {case e => Not(e)}
 	)
 
 	def binTerm = (
-      "true" ^^ {case _ => True}
-      | "false" ^^ {case _ => False}
-      | aExp ~ op_r ~ aExp ^^ { case e1 ~ op ~ e2 => RelationalExp(op, e1, e2)}
-  )
+		"true" ^^ {case _ => True}
+			| "false" ^^ {case _ => False}
+			| aExp ~ op_r ~ aExp ^^ { case e1 ~ op ~ e2 => RelationalExp(op, e1, e2)}
+	)
 
-  def mkTreeBoolean(input: BExp ~ List[String ~ BExp]): BExp = {
-    def combine(acc: BExp, next: String ~ BExp) = {
-      next match {
-        case op ~ y => BinBExp(op, acc, y)
-      }
-    }
+	def mkTreeBoolean(input: BExp ~ List[String ~ BExp]): BExp = {
+		def combine(acc: BExp, next: String ~ BExp) = {
+			next match {
+				case op ~ y => BinBExp(op, acc, y)
+			}
+		}
 
-    input match {
-      case first ~ rest => ((first: BExp) /: rest)(combine)
-    }
-  }
+		input match {
+			case first ~ rest => ((first: BExp) /: rest)(combine)
+		}
+	}
 
 
 	def statements = statement.*
 	def block = "{" ~> statements <~ "}" ^^ {l => Block(l)}
 	def statement : Parser[Statement] = whileLoop | ifelse | assignment | skip | block
 
-  def whileLoop = ("while(" ~> bExp <~ ")" ) ~ statement ^^
-    { case conditional ~ body => While(conditional, body) }
+	def whileLoop = ("while(" ~> bExp <~ ")" ) ~ statement ^^
+		{ case conditional ~ body => While(conditional, body) }
 
 	def assignment = (identifier <~ ":=") ~ aExp ^^ {
 		case id ~ e => Assig(id, e)
 	}
 
-  def ifelse = ("if" ~> bExp) ~ ("then" ~> statement) ~ ("else" ~> statement) ^^ {
-    case bexp ~ s1 ~ s2 => IfElse(bexp, s1, s2)
-  }
+	def ifelse = ("if" ~> bExp) ~ ("then" ~> statement) ~ ("else" ~> statement) ^^ {
+		case bexp ~ s1 ~ s2 => IfElse(bexp, s1, s2)
+	}
 
-  def skip = "skip" ^^ {case _ => Skip}
+	def skip = "skip" ^^ {case _ => Skip}
 }
 
 trait BExp
