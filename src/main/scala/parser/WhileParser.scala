@@ -1,95 +1,65 @@
 package parser
 
-import scala.util.parsing.combinator.RegexParsers
+import scala.util.parsing.combinator.{PackratParsers, RegexParsers}
 
-object WhileParser extends RegexParsers {
+object WhileParser extends RegexParsers with PackratParsers {
 
 	override type Elem = Char
 
-	def identifier = """[a-zA-Z][a-zA-Z0-9]*""".r
-	def integer = """(0|[1-9]\d*)""".r ^^ {_.toInt}
+	lazy val identifier: PackratParser[String] = """[a-zA-Z][a-zA-Z0-9]*""".r ^^ {_.toString}
+	lazy val integer: PackratParser[Int] = """(0|[1-9]\d*)""".r ^^ {_.toInt}
 
-	def op_a = """[\-\+\*]""".r ^^ {_.toString}
-	def op_r = """<|>|==""".r ^^ {_.toString}
-	def op_b = """&&|\|\|""".r ^^ {_.toString}
+	lazy val op_a: PackratParser[String] = """[\-\+\*]""".r ^^ {_.toString}
+	lazy val op_r: PackratParser[String] = """<|>|==""".r ^^ {_.toString}
+	lazy val op_b: PackratParser[String] = """&&|\|\|""".r ^^ {_.toString}
+	def precedence(op: String) : Int = op match {
+		case "*" => 6
+		case "+" | "-" => 5
+	}
 
-	def aExp: Parser[AExp] = term ~ (op_a ~ term).* ^^ mkTreeArithmatic
+	lazy val aExp: PackratParser[AExp] = nestedAExp | aExp ~ op_a ~ aTerm ^^ {
+		case e1 ~ op ~ e2 => BinOp(op, e1, e2)
+	} | aTerm
 
-	def term : Parser[AExp] = (
+	lazy val nestedAExp: PackratParser[AExp] = aExp ~ op_a ~ aTerm ~ op_a ~ aTerm ^^ {
+		case e1 ~ op1 ~ e2 ~ op2 ~ e3 if precedence(op2) > precedence(op1) => BinOp(op1, e1, BinOp(op2, e2, e3))
+		case e1 ~ op1 ~ e2 ~ op2 ~ e3 => BinOp(op2, BinOp(op1, e1, e2), e3)
+	}
+
+	lazy val aTerm : PackratParser[AExp] = (
 		("(" ~> aExp <~ ")")
 			| (identifier ^^ Ref)
 			| (integer ^^ INT)
 	)
 
-	def mkTreeArithmatic(input: AExp ~ List[String ~ AExp]): AExp = {
-		def combine(acc: AExp, next: String ~ AExp) = {
-			next match {
-				case op ~ y => BinOp(op, acc, y)
-			}
+	lazy val bExp: PackratParser[BExp] = (
+		bExp ~ op_b ~ binTerm ^^ {
+			case e1 ~ op ~ e2 => BinBExp(op, e1, e2)
 		}
-
-		input match {
-			case first ~ rest => ((first: AExp) /: rest)(combine)
-		}
-	}
-
-	def bExp: Parser[BExp] = (
-		binTerm ~ (op_b ~ binTerm).* ^^ mkTreeBoolean
 			| "not" ~> bExp ^^ {case e => Not(e)}
+			| binTerm
 	)
 
-	def binTerm = (
+	lazy val binTerm = (
 		"true" ^^ {case _ => True}
 			| "false" ^^ {case _ => False}
 			| aExp ~ op_r ~ aExp ^^ { case e1 ~ op ~ e2 => RelationalExp(op, e1, e2)}
 	)
 
-	def mkTreeBoolean(input: BExp ~ List[String ~ BExp]): BExp = {
-		def combine(acc: BExp, next: String ~ BExp) = {
-			next match {
-				case op ~ y => BinBExp(op, acc, y)
-			}
-		}
+	lazy val statements = statement.*
+	lazy val block = "{" ~> statements <~ "}" ^^ {l => Block(l)}
+	lazy val statement : PackratParser[Statement] = whileLoop | ifelse | assignment | skip | block
 
-		input match {
-			case first ~ rest => ((first: BExp) /: rest)(combine)
-		}
-	}
-
-
-	def statements = statement.*
-	def block = "{" ~> statements <~ "}" ^^ {l => Block(l)}
-	def statement : Parser[Statement] = whileLoop | ifelse | assignment | skip | block
-
-	def whileLoop = ("while(" ~> bExp <~ ")" ) ~ statement ^^
+	lazy val whileLoop = ("while(" ~> bExp <~ ")" ) ~ statement ^^
 		{ case conditional ~ body => While(conditional, body) }
 
-	def assignment = (identifier <~ ":=") ~ aExp ^^ {
+	lazy val assignment = (identifier <~ ":=") ~ aExp ^^ {
 		case id ~ e => Assig(id, e)
 	}
 
-	def ifelse = ("if" ~> bExp) ~ ("then" ~> statement) ~ ("else" ~> statement) ^^ {
+	lazy val ifelse = ("if" ~> bExp) ~ ("then" ~> statement) ~ ("else" ~> statement) ^^ {
 		case bexp ~ s1 ~ s2 => IfElse(bexp, s1, s2)
 	}
 
-	def skip = "skip" ^^ {case _ => Skip}
+	lazy val skip = "skip" ^^ {case _ => Skip}
 }
-
-trait BExp
-case object True extends BExp
-case object False extends BExp
-case class Not(e1: BExp) extends BExp
-case class BinBExp(operator: String, e1: BExp, e2: BExp) extends BExp
-case class RelationalExp(operator: String, e1: AExp, e2: AExp) extends BExp
-
-trait AExp
-case class BinOp(operator: String, e1: AExp, e2: AExp) extends AExp
-case class INT(value : Int) extends AExp
-case class Ref(id: String) extends AExp
-
-trait Statement
-case class Block(statements: List[Statement]) extends Statement
-case class While(conditional: BExp, stmt: Statement) extends Statement
-case class Assig(ref: String, exp: AExp) extends Statement
-case class IfElse(condition: BExp, s1: Statement, s2: Statement) extends Statement
-case object Skip extends Statement
