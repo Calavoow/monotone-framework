@@ -1,8 +1,5 @@
 import parser.WhileParser
 
-import shapeless._
-import poly._
-
 object Main {
 	def main(args: Array[String]) {
     println(util.Properties.versionString)

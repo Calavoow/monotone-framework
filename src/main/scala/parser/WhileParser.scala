@@ -29,8 +29,8 @@ object WhileParser extends RegexParsers with PackratParsers {
 
 	lazy val aTerm : PackratParser[AExp] = (
 		("(" ~> aExp <~ ")")
-			| (identifier ^^ Ref)
-			| (integer ^^ INT)
+			| (identifier ^^ { case id => Ref(id) })
+			| (integer ^^ { case int => INT(int)})
 	)
 
 	lazy val bExp: PackratParser[BExp] = (
@@ -41,17 +41,17 @@ object WhileParser extends RegexParsers with PackratParsers {
 			| binTerm
 	)
 
-	lazy val binTerm = (
+	lazy val binTerm : PackratParser[BExp] = (
 		"true" ^^ {case _ => True}
 			| "false" ^^ {case _ => False}
 			| aExp ~ op_r ~ aExp ^^ { case e1 ~ op ~ e2 => RelationalExp(op, e1, e2)}
 	)
 
-	lazy val statements = statement.*
-	lazy val block = "{" ~> statements <~ "}" ^^ {l => Block(l)}
+	lazy val statements : PackratParser[List[Statement]] = statement.*
+	lazy val block : PackratParser[Statement] = "{" ~> statements <~ "}" ^^ {case l => Block(l)}
 	lazy val statement : PackratParser[Statement] = whileLoop | ifelse | assignment | skip | block
 
-	lazy val whileLoop = ("while(" ~> bExp <~ ")" ) ~ statement ^^
+	lazy val whileLoop : PackratParser[Statement] = ("while(" ~> bExp <~ ")" ) ~ statement ^^
 		{ case conditional ~ body => While(conditional, body) }
 
 	lazy val assignment = (identifier <~ ":=") ~ aExp ^^ {
