@@ -1,6 +1,7 @@
 package parser
 
 import scala.util.parsing.combinator.{PackratParsers, RegexParsers}
+import AST._
 
 object WhileParser extends RegexParsers with PackratParsers {
 
