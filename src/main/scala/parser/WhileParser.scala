@@ -54,11 +54,11 @@ object WhileParser extends RegexParsers with PackratParsers {
 	lazy val whileLoop : PackratParser[Statement] = ("while(" ~> bExp <~ ")" ) ~ statement ^^
 		{ case conditional ~ body => While(conditional, body) }
 
-	lazy val assignment = (identifier <~ ":=") ~ aExp ^^ {
+	lazy val assignment : PackratParser[Statement] = (identifier <~ ":=") ~ aExp ^^ {
 		case id ~ e => Assig(id, e)
 	}
 
-	lazy val ifelse = ("if" ~> bExp) ~ ("then" ~> statement) ~ ("else" ~> statement) ^^ {
+	lazy val ifelse : PackratParser[Statement] = ("if" ~> bExp) ~ ("then" ~> statement) ~ ("else" ~> statement) ^^ {
 		case bexp ~ s1 ~ s2 => IfElse(bexp, s1, s2)
 	}
 
