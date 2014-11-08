@@ -4,7 +4,7 @@ import org.scalatest.{FlatSpec, Matchers, FunSuite}
 import parser.AST._
 
 
-class WhileParserTest extends FlatSpec with Matchers {
+class WhileParserSpec extends FlatSpec with Matchers {
 
 	"The While Parser" should "parse a statement" in {
 		val toParse = "a := 2"

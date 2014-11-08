@@ -18,4 +18,8 @@ object Flow {
 		})
 		node
 	}
+
+	def flow(node: AstNode) : Map[Statement, Set[(Int, Int)]] = node match {
+		case _ => Map()
+	}
 }

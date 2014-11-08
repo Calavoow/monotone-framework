@@ -47,7 +47,7 @@ object WhileParser extends RegexParsers with PackratParsers {
 			| aExp ~ op_r ~ aExp ^^ { case e1 ~ op ~ e2 => RelationalExp(op, e1, e2)}
 	)
 
-	lazy val statements : PackratParser[List[Statement]] = statement.*
+	lazy val statements : PackratParser[List[Statement]] = statement.+
 	lazy val block : PackratParser[Statement] = "{" ~> statements <~ "}" ^^ {case l => Block(l)}
 	lazy val statement : PackratParser[Statement] = whileLoop | ifelse | assignment | skip | block
 
