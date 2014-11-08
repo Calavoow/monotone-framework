@@ -30,4 +30,19 @@ class WhileParserSpec extends FlatSpec with Matchers {
 
 		parsed.get should be (expected)
 	}
+
+	it should "not accept a sequence of less than 2" in {
+		val toParse = "{a:=1}"
+		val parsed = WhileParser.parseAll(WhileParser.statement, toParse)
+
+		parsed.isInstanceOf[WhileParser.NoSuccess] should be(true)
+	}
+
+	it should "parse a sequence of 2" in {
+		val toParse = "{a:=1 b:=2}"
+		val expected = Block(List(Assig("a", INT(1)), Assig("b", INT(2))))
+		val parsed = WhileParser.parseAll(WhileParser.statement, toParse)
+
+		parsed.get should be (expected)
+	}
 }
