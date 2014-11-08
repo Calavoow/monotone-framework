@@ -42,8 +42,8 @@ object WhileParser extends RegexParsers with PackratParsers {
 	)
 
 	lazy val binTerm : PackratParser[BExp] = (
-		"true" ^^ {case _ => True}
-			| "false" ^^ {case _ => False}
+		"true" ^^ {case _ => True()}
+			| "false" ^^ {case _ => False()}
 			| aExp ~ op_r ~ aExp ^^ { case e1 ~ op ~ e2 => RelationalExp(op, e1, e2)}
 	)
 
@@ -65,5 +65,5 @@ object WhileParser extends RegexParsers with PackratParsers {
 		case bexp ~ s1 ~ s2 => IfElse(bexp, s1, s2)
 	}
 
-	lazy val skip = "skip" ^^ {case _ => Skip}
+	lazy val skip = "skip" ^^ {case _ => Skip()}
 }

@@ -10,6 +10,7 @@ class FlowSpec extends FlatSpec with Matchers{
 		val children = in.children zip expected.children
 		children.foreach { case (c1, c2) => allLabelsEqual(c1, c2) }
 	}
+
 	"labelNodes" should "label a simple assignment correctly" in {
 		val ast = Assig("a", INT(2))
 		val labeledAst = Flow.labelNodes(ast)
@@ -19,5 +20,17 @@ class FlowSpec extends FlatSpec with Matchers{
 		expected.exp.label = 2
 
 		allLabelsEqual(ast, expected)
+	}
+
+	"flow calculation" should "give a correct flow set for an if-else" in {
+		// If(1 < 2) x:=1 else x:=2
+		val ast = IfElse(RelationalExp("<", INT(1), INT(2)), Assig("x", INT(1)), Assig("x", INT(2)))
+		Flow.labelNodes(ast)
+		val expected = Set(
+			(1,2) //If -> conditional
+			,(2,5) // conditional -> stmt 1
+			,(2,7) // conditional -> stmt 2
+		)
+		ast.flow should equal(expected)
 	}
 }

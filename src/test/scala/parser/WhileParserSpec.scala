@@ -3,7 +3,6 @@ package parser
 import org.scalatest.{FlatSpec, Matchers, FunSuite}
 import parser.AST._
 
-
 class WhileParserSpec extends FlatSpec with Matchers {
 
 	"The While Parser" should "parse a statement" in {
@@ -19,8 +18,8 @@ class WhileParserSpec extends FlatSpec with Matchers {
 		val expected = IfElse(
 			BinBExp("||",
 				BinBExp("&&",
-					True,True
-				),False
+					True(),True()
+				),False()
 			),Assig("x",INT(1)),
 			Block(List(
 				Assig("x",BinOp("+",BinOp("*",INT(1),INT(2)),INT(3)))
