@@ -3,6 +3,17 @@ package analyzer
 import scala.collection.mutable
 
 object Monotone {
+	/**
+	 * The Most Fixed Point calculates various program analyses according to the Monotone Framework.
+	 * @param lub The Least Upper Bound function ⊔
+	 * @param partialOrd A partial ordering ⊑
+	 * @param F The program flow. Either forward or reverse flow.
+	 * @param E The entry point of the program for this analyses.
+	 * @param iota The extremal values of the analysis. A tuple of the form (ι,⊥)
+	 * @param f The analysis transfer function from label×L -> L.
+	 * @tparam L The type of the analysis function.
+	 * @return The (entry-,exit-)set of a all nodes. (Analysis_○, Analysis_●)
+	 */
 	def MFP[L](lub : (L, L) => L
 			,partialOrd: (L,L) => Boolean
 	        ,F: Set[(Int, Int)]

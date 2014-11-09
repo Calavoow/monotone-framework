@@ -3,6 +3,11 @@ package analyzer
 import parser.AST._
 
 object Analyses {
+	/**
+	 * Available Expressions gives the expressions that must have been calculated before the node.
+	 * @param program The program to analyse
+	 * @return
+	 */
 	def availableExpressions(program: Statement) : (Seq[Set[BinOp]], Seq[Set[BinOp]]) = {
 		type L = Set[BinOp]
 
@@ -47,6 +52,11 @@ object Analyses {
 		Monotone.MFP[L](lub, partialOrd, F, E, iota, f)
 	}
 
+	/**
+	 * Reaching Definitions gives the set of assignments that may reach a node.
+	 * @param program The program to analyse
+	 * @return
+	 */
 	def reachingDefinitions(program: Statement) : (Seq[Set[(String, Int)]], Seq[Set[(String, Int)]]) = {
 		type L = Set[(String, Int)]
 
@@ -90,6 +100,11 @@ object Analyses {
 		Monotone.MFP[L](lub, partialOrd, F, E, iota, f)
 	}
 
+	/**
+	 * Very Busy analysis give the expressions that must be very busy at the exit of a node.
+	 * @param program The program to analyse
+	 * @return
+	 */
 	def veryBusy(program: Statement) : (Seq[Set[BinOp]], Seq[Set[BinOp]]) = {
 		type L = Set[BinOp]
 		val emptySet = Set[BinOp]()
@@ -135,6 +150,11 @@ object Analyses {
 		(mfp_out, mfp_in)
 	}
 
+	/**
+	 * Live Variables gives the free variables that may be live at the exit of a node.
+	 * @param program The program to analyse
+	 * @return
+	 */
 	def liveVariables(program: Statement) : (Seq[Set[String]], Seq[Set[String]]) = {
 		type L = Set[String]
 		val emptySet = Set[String]()
@@ -191,15 +211,24 @@ object Analyses {
 		case n => n.children.map(findAExp).foldLeft(Set[BinOp]())(_ ++ _)
 	}
 
-	def FV(exp: AstNode) : Set[String] = exp match {
+	/**
+	 * Calculates the Free Variables in the given node and all its children.
+	 * 
+	 * Free variables are variables that are referenced in an expression.
+	 * @param node The AST node and all its children to analyze.
+	 * @return
+	 */
+	def FV(node: AstNode) : Set[String] = node match {
 		case Ref(v) => Set(v)
-		case _ => exp.children.map(FV).foldLeft(Set[String]())(_ ++ _)
+		case _ => node.children.map(FV).foldLeft(Set[String]())(_ ++ _)
 	}
 
 	/**
-	 * Labels nodes with a number top-down.
-	 * @param node The node to label
-	 * @return
+	 * Labels relevant nodes with a unique number top-down.
+	 *
+	 * Nodes are relevant when they have the LabeledNode trait.
+	 * @param node The AST node and all its children to label
+	 * @return A counter for the next (unique) label.
 	 */
 	def labelNodes(node: AstNode, counter: Int =  0) : Int = {
 		node match {
@@ -214,6 +243,11 @@ object Analyses {
 		}
 	}
 
+	/**
+	 * labelToNode calculates a Map from label -> AST node.
+	 * @param node The node and all its children to analyze.
+	 * @return
+	 */
 	def labelToNode(node: AstNode): Map[Int, AstNode] = {
 		node match {
 			case n: LabeledNode => Map(n.label -> n)

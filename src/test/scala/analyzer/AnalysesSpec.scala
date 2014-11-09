@@ -189,7 +189,7 @@ class AnalysesSpec extends FlatSpec with Matchers{
 		val program = "{x:=2 y:=4 x:=1 if y>x then z:=y else z:=y*y x:=z}"
 		val ast = WhileParser.parseAll(WhileParser.statement, program).get
 		Analyses.labelNodes(ast)
-		
+
 		val expectedIn = List(
 			Set()
 			, Set()

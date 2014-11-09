@@ -7,16 +7,21 @@ object AST {
 		def pp: String
 	}
 
+	/**
+	 * A trait for all nodes that should be labeled.
+	 */
 	sealed trait LabeledNode extends AstNode {
 		var label = -1
 	}
 
+	/**
+	 * A trait for all nodes that should be in the set of Blocks.
+	 */
 	sealed trait Block extends AstNode
 
 	sealed trait Exp extends AstNode {
 		def children: List[Exp]
 	}
-
 	/**
 	 * The trait for binary expressions.
 	 *
@@ -134,5 +139,4 @@ object AST {
 		override def flow = Set()
 		override def pp = s"skip^$label"
 	}
-
 }
