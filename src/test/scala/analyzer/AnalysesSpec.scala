@@ -128,4 +128,45 @@ class AnalysesSpec extends FlatSpec with Matchers{
 		in should equal(expectedIn)
 		out should equal(expectedOut)
 	}
+
+	"Very Busy" should "analyze an assignment" in {
+		val ast = Assig("x", BinOp("+", Ref("a"), INT(1)))
+		Analyses.labelNodes(ast)
+		val expectedIn = List(
+			Set(BinOp("+", Ref("a"), INT(1)))
+		)
+		val expectedOut = List(
+			Set()
+		)
+
+		val (in, out) = Analyses.veryBusy(ast)
+
+		in should equal(expectedIn)
+		out should equal(expectedOut)
+	}
+
+	it should "analyze example 2.9" in {
+		val program = "if a>b then {x:=b-a y:=a-b} else {y:=b-a x:=a-b}"
+		val ast = WhileParser.parseAll(WhileParser.statement, program).get
+		Analyses.labelNodes(ast)
+
+		val expectedIn = List(
+			Set(BinOp("-", Ref("a"), Ref("b")), BinOp("-", Ref("b"), Ref("a")))
+			, Set(BinOp("-", Ref("a"), Ref("b")), BinOp("-", Ref("b"), Ref("a")))
+			, Set(BinOp("-", Ref("a"), Ref("b")))
+			, Set(BinOp("-", Ref("a"), Ref("b")), BinOp("-", Ref("b"), Ref("a")))
+			, Set(BinOp("-", Ref("a"), Ref("b")))
+		)
+		val expectedOut = List(
+			Set(BinOp("-", Ref("a"), Ref("b")), BinOp("-", Ref("b"), Ref("a")))
+			, Set(BinOp("-", Ref("a"), Ref("b")))
+			, Set()
+			, Set(BinOp("-", Ref("a"), Ref("b")))
+			, Set()
+		)
+		val(in, out) = Analyses.veryBusy(ast)
+
+		in should equal(expectedIn)
+		out should equal(expectedOut)
+	}
 }
