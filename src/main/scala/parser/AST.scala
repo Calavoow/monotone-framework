@@ -41,7 +41,7 @@ object AST {
 	}
 	case class RelationalExp(operator: String, e1: AExp, e2: AExp) extends BExp {
 		override def children = List(e1, e2)
-		override def pp = s"${e1.pp} $operator^$label ${e2.pp}"
+		override def pp = s"[${e1.pp} $operator ${e2.pp}]^$label"
 	}
 
 	sealed trait AExp extends Exp

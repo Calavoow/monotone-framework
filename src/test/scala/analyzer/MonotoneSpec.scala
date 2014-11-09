@@ -91,4 +91,44 @@ class MonotoneSpec extends FlatSpec with Matchers{
 		in should equal(expectedIn)
 		out should equal(expectedOut)
 	}
+
+	"Reaching definitions" should "analyze an assignment" in {
+		val ast = Assig("x", BinOp("+", Ref("a"), INT(1)))
+		Monotone.labelNodes(ast)
+		val expectedIn = List(
+			Set(("a", -1)) // Only a occurs as a FreeVar
+		)
+		val expectedOut = List(
+			Set(("x", 0), ("a", -1)) // x is set at label 0
+		)
+
+		val (in, out) = Monotone.rDef(ast)
+		in should equal(expectedIn)
+		out should equal(expectedOut)
+	}
+
+	it should "analyze example 2.7" in {
+		val program = "{x:=5 y:=1 while(x>1){y:=x*y x:=x-1}}"
+		val ast = WhileParser.parseAll(WhileParser.statement, program).get
+		Monotone.labelNodes(ast)
+
+		val expectedIn = List(
+			Set(("x", -1),("y", -1))
+			, Set(("x", 0),("y", -1))
+			, Set(("x", 0),("y", 1),("x", 4),("y", 3))
+			, Set(("x", 0),("y", 1),("x", 4),("y", 3))
+			, Set(("x", 0),("y", 3),("x", 4))
+		)
+		val expectedOut = List(
+			Set(("x", 0),("y", -1))
+			, Set(("x", 0),("y", 1))
+			, Set(("x", 0),("y", 1),("x", 4),("y", 3))
+			, Set(("x", 0),("x", 4),("y", 3))
+			, Set(("y", 3),("x", 4))
+		)
+
+		val (in, out) = Monotone.rDef(ast)
+		in should equal(expectedIn)
+		out should equal(expectedOut)
+	}
 }

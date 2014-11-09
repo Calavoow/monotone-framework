@@ -105,7 +105,7 @@ object Monotone {
 
 		val iota = (Set[BinOp](), aExpStar)
 
-		def killAE(label: Int) : Set[BinOp] = {
+		def killAE(label: Int) : L= {
 			val node = labelMap(label)
 			node match {
 				case Assig(x, exp) =>
@@ -113,7 +113,7 @@ object Monotone {
 				case _ => Set()
 			}
 		}
-		def genAE(label: Int) : Set[BinOp] = {
+		def genAE(label: Int) : L = {
 			val node = labelMap(label)
 			node match {
 				case Assig(x, exp) =>
@@ -128,11 +128,54 @@ object Monotone {
 		MFP[L](lub, partialOrd, F, E, iota, f)
 	}
 
+	def rDef(program: Statement) : (Seq[Set[(String, Int)]], Seq[Set[(String, Int)]]) = {
+		type L = Set[(String, Int)]
+
+		val labelMap = labelToNode(program)
+
+		// s1 intersect s2
+		val lub = (s1: L, s2: L) => s1 ++ s2
+
+		// l1 superset l2
+		def partialOrd(l1: L, l2: L): Boolean = {
+			l1.subsetOf(l2)
+		}
+
+		val F = program.flow
+		val E = Set(program.initLabel)
+
+		val iota = (FV(program).map((_, -1)), Set[(String, Int)]())
+
+		def findAssig(x: String, node: AstNode) : Set[Int] = node match {
+			case a@Assig(v, _) if x == v => Set(a.label)
+			case n => n.children.map(findAssig(x, _)).foldLeft(Set[Int]())(_ ++ _)
+		}
+		def killRD(label: Int) : L = {
+			val node = labelMap(label)
+			node match {
+				case Assig(x, exp) =>
+					findAssig(x, program).+(-1).map((x, _))
+				case _ => Set[(String, Int)]()
+			}
+		}
+		def genRD(label: Int) : L = {
+			val node = labelMap(label)
+			node match {
+				case Assig(x, exp) => Set((x, label))
+				case _ => Set[(String, Int)]()
+			}
+		}
+
+		val f = f_l[(String, Int)](killRD, genRD) _
+
+		MFP[L](lub, partialOrd, F, E, iota, f)
+	}
+
 	def f_l[T](kill: Int => Set[T], gen: Int => Set[T])(label: Int, currAnalysis: Set[T]) : Set[T] = {
 		(currAnalysis -- kill(label)) ++ gen(label)
 	}
 
-	def FV(exp: Exp) : Set[String] = exp match {
+	def FV(exp: AstNode) : Set[String] = exp match {
 		case Ref(v) => Set(v)
 		case _ => exp.children.map(FV).foldLeft(Set[String]())(_ ++ _)
 	}
