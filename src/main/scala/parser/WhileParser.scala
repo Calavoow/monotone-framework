@@ -51,7 +51,7 @@ object WhileParser extends RegexParsers with PackratParsers {
 	 * Statements must contain at least 2 statements, so that it is a sequence.
 	 */
 	lazy val statements : PackratParser[List[Statement]] = statement ~ statement.+ ^^ {case s1 ~ s2s => s1 +: s2s}
-	lazy val block : PackratParser[Statement] = "{" ~> statements <~ "}" ^^ {case l => Seq(l)}
+	lazy val block : PackratParser[Statement] = "{" ~> statements <~ "}" ^^ {case l => Sequence(l)}
 	lazy val statement : PackratParser[Statement] = whileLoop | ifelse | assignment | skip | block
 
 	lazy val whileLoop : PackratParser[Statement] = ("while(" ~> bExp <~ ")" ) ~ statement ^^

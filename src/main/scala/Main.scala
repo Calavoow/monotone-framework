@@ -1,4 +1,4 @@
-import analyzer.Flow
+import analyzer.Monotone
 import parser.WhileParser
 
 object Main {
@@ -13,7 +13,7 @@ object Main {
 		}
 
 		val prog = parsed.get
-		Flow.labelNodes(prog)
+		Monotone.labelNodes(prog)
 		println(prog.pp)
 		println(prog.flow)
 		println(prog.reverseFlow)

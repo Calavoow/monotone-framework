@@ -21,7 +21,7 @@ class WhileParserSpec extends FlatSpec with Matchers {
 					True(),True()
 				),False()
 			),Assig("x",INT(1)),
-			Seq(List(
+			Sequence(List(
 				Assig("x",BinOp("*",INT(1),INT(2))),
 				Assig("y", INT(3))
 			))
@@ -40,7 +40,7 @@ class WhileParserSpec extends FlatSpec with Matchers {
 
 	it should "parse a sequence of 2" in {
 		val toParse = "{a:=1 b:=2}"
-		val expected = Seq(List(Assig("a", INT(1)), Assig("b", INT(2))))
+		val expected = Sequence(List(Assig("a", INT(1)), Assig("b", INT(2))))
 		val parsed = WhileParser.parseAll(WhileParser.statement, toParse)
 
 		parsed.get should be (expected)

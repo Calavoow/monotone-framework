@@ -10,7 +10,11 @@ object AST {
 
 	sealed trait Block
 
-	sealed trait BExp extends AstNode with Block
+	sealed trait Exp extends AstNode {
+		def children: List[Exp]
+	}
+
+	sealed trait BExp extends Exp with Block
 	case class True() extends BExp {
 		override def children = Nil
 		override def pp = s"true^$label"
@@ -32,7 +36,7 @@ object AST {
 		override def pp = s"${e1.pp} $operator^$label ${e2.pp}"
 	}
 
-	sealed trait AExp extends AstNode
+	sealed trait AExp extends Exp
 	case class BinOp(operator: String, e1: AExp, e2: AExp) extends AExp {
 		override def children = List(e1, e2)
 		override def pp = s"BinOp($operator, ${e1.pp}, ${e2.pp})^$label"
@@ -57,7 +61,7 @@ object AST {
 		def reverseFlow: Set[(Int, Int)] = flow.map { case (l1, l2) => (l2, l1) }
 	}
 
-	case class Seq(statements: List[Statement]) extends Statement {
+	case class Sequence(statements: List[Statement]) extends Statement {
 		override def children = statements
 		override def pp = s"{\n${statements.map(_.pp).mkString("\n")}\n}^$label"
 

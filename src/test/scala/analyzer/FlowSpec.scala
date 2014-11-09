@@ -15,7 +15,7 @@ class FlowSpec extends FlatSpec with Matchers{
 
 	"labelNodes" should "label a simple assignment correctly" in {
 		val ast = Assig("a", INT(2))
-		val labeledAst = Flow.labelNodes(ast)
+		val labeledAst = Monotone.labelNodes(ast)
 
 		val expected = Assig("a", INT(2))
 		expected.label = 1
@@ -27,7 +27,7 @@ class FlowSpec extends FlatSpec with Matchers{
 	"flow calculation" should "give a correct flow set for an if-else" in {
 		// If(1 < 2) x:=1 else x:=2
 		val ast = IfElse(RelationalExp("<", INT(1), INT(2)), Assig("x", INT(1)), Assig("x", INT(2)))
-		Flow.labelNodes(ast)
+		Monotone.labelNodes(ast)
 		val expected = Set(
 			(1,2) //If -> conditional
 			,(2,5) // conditional -> stmt 1
