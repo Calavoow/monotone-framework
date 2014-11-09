@@ -3,7 +3,7 @@ package analyzer
 import parser.AST._
 
 object Analyses {
-	def aExp(program: Statement) : (Seq[Set[BinOp]], Seq[Set[BinOp]]) = {
+	def availableExpressions(program: Statement) : (Seq[Set[BinOp]], Seq[Set[BinOp]]) = {
 		type L = Set[BinOp]
 
 		val labelMap = labelToNode(program)
@@ -47,7 +47,7 @@ object Analyses {
 		Monotone.MFP[L](lub, partialOrd, F, E, iota, f)
 	}
 
-	def rDef(program: Statement) : (Seq[Set[(String, Int)]], Seq[Set[(String, Int)]]) = {
+	def reachingDefinitions(program: Statement) : (Seq[Set[(String, Int)]], Seq[Set[(String, Int)]]) = {
 		type L = Set[(String, Int)]
 
 		val labelMap = labelToNode(program)
@@ -129,6 +129,48 @@ object Analyses {
 		}
 
 		val f = f_l[BinOp](killVB, genVB) _
+
+		// Note: We have to switch in and out set, because of reversed flow.
+		val (mfp_in, mfp_out) = Monotone.MFP[L](lub, partialOrd, F, E, iota, f)
+		(mfp_out, mfp_in)
+	}
+
+	def liveVariables(program: Statement) : (Seq[Set[String]], Seq[Set[String]]) = {
+		type L = Set[String]
+		val emptySet = Set[String]()
+
+		val labelMap = labelToNode(program)
+
+		// s1 union s2
+		val lub = (s1: L, s2: L) => s1 ++ s2
+
+		// l1 subset l2
+		def partialOrd(l1: L, l2: L): Boolean = {
+			l1.subsetOf(l2)
+		}
+
+		val F = program.reverseFlow
+		val E = program.finalLabel
+
+		val iota = (emptySet, emptySet)
+
+		def killLV(label: Int) : L = {
+			val node = labelMap(label)
+			node match {
+				case Assig(x, exp) => Set(x)
+				case _ => emptySet
+			}
+		}
+		def genLV(label: Int) : L = {
+			val node = labelMap(label)
+			node match {
+				case Assig(_, exp) => FV(exp)
+				case r@RelationalExp(_,_,_) => FV(r)
+				case _ => emptySet
+			}
+		}
+
+		val f = f_l[String](killLV, genLV) _
 
 		// Note: We have to switch in and out set, because of reversed flow.
 		val (mfp_in, mfp_out) = Monotone.MFP[L](lub, partialOrd, F, E, iota, f)

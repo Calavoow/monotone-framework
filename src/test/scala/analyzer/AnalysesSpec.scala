@@ -48,7 +48,7 @@ class AnalysesSpec extends FlatSpec with Matchers{
 		ast.blocks should equal(expected)
 	}
 
-	"available expresssion" should "analyze an assignment" in {
+	"Available Expresssions" should "analyze an assignment" in {
 		val ast = Assig("x", BinOp("+", Ref("a"), INT(1)))
 		Analyses.labelNodes(ast)
 		val expectedIn = List(
@@ -58,7 +58,7 @@ class AnalysesSpec extends FlatSpec with Matchers{
 			Set(BinOp("+", Ref("a"), INT(1)))
 		)
 
-		val (in, out) = Analyses.aExp(ast)
+		val (in, out) = Analyses.availableExpressions(ast)
 		in should equal(expectedIn)
 		out should equal(expectedOut)
 	}
@@ -83,7 +83,7 @@ class AnalysesSpec extends FlatSpec with Matchers{
 			, Set[BinOp]()
 			, Set(BinOp("+", Ref("a"), Ref("b")))
 		)
-		val(in, out) = Analyses.aExp(ast)
+		val(in, out) = Analyses.availableExpressions(ast)
 
 		in should equal(expectedIn)
 		out should equal(expectedOut)
@@ -99,7 +99,7 @@ class AnalysesSpec extends FlatSpec with Matchers{
 			Set(("x", 0), ("a", -1)) // x is set at label 0
 		)
 
-		val (in, out) = Analyses.rDef(ast)
+		val (in, out) = Analyses.reachingDefinitions(ast)
 		in should equal(expectedIn)
 		out should equal(expectedOut)
 	}
@@ -124,7 +124,7 @@ class AnalysesSpec extends FlatSpec with Matchers{
 			, Set(("y", 3),("x", 4))
 		)
 
-		val (in, out) = Analyses.rDef(ast)
+		val (in, out) = Analyses.reachingDefinitions(ast)
 		in should equal(expectedIn)
 		out should equal(expectedOut)
 	}
@@ -165,6 +165,50 @@ class AnalysesSpec extends FlatSpec with Matchers{
 			, Set()
 		)
 		val(in, out) = Analyses.veryBusy(ast)
+
+		in should equal(expectedIn)
+		out should equal(expectedOut)
+	}
+
+	"Live Variables" should "analyze an assignment" in {
+		val ast = Assig("x", BinOp("+", Ref("a"), INT(1)))
+		Analyses.labelNodes(ast)
+		val expectedIn = List(
+			Set("a")
+		)
+		val expectedOut = List(
+			Set()
+		)
+
+		val (in, out) = Analyses.liveVariables(ast)
+		in should equal(expectedIn)
+		out should equal(expectedOut)
+	}
+
+	it should "analyze example 2.11" in {
+		val program = "{x:=2 y:=4 x:=1 if y>x then z:=y else z:=y*y x:=z}"
+		val ast = WhileParser.parseAll(WhileParser.statement, program).get
+		Analyses.labelNodes(ast)
+		
+		val expectedIn = List(
+			Set()
+			, Set()
+			, Set("y")
+			, Set("y","x")
+			, Set("y")
+			, Set("y")
+			, Set("z")
+		)
+		val expectedOut = List(
+			Set()
+			, Set("y")
+			, Set("y","x")
+			, Set("y")
+			, Set("z")
+			, Set("z")
+			, Set()
+		)
+		val(in, out) = Analyses.liveVariables(ast)
 
 		in should equal(expectedIn)
 		out should equal(expectedOut)
