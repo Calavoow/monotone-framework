@@ -1,4 +1,6 @@
-import org.scalatest.{Matchers, FlatSpec}
+package analyzer
+
+import org.scalatest.{FlatSpec, Matchers}
 import parser.AST._
 
 class FlowSpec extends FlatSpec with Matchers{
@@ -32,5 +34,15 @@ class FlowSpec extends FlatSpec with Matchers{
 			,(2,7) // conditional -> stmt 2
 		)
 		ast.flow should equal(expected)
+	}
+
+	"blocks" should "calculate blocks for a while" in {
+		val ast = While(BinBExp("&&", True(), False()), Skip())
+		val expected = Set(
+			BinBExp("&&", True(), False())
+			, Skip()
+		)
+
+		ast.blocks should equal(expected)
 	}
 }

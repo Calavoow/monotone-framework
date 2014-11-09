@@ -8,7 +8,9 @@ object AST {
 		def pp: String
 	}
 
-	sealed trait BExp extends AstNode
+	sealed trait Block
+
+	sealed trait BExp extends AstNode with Block
 	case class True() extends BExp {
 		override def children = Nil
 		override def pp = s"true^$label"
@@ -50,10 +52,12 @@ object AST {
 	sealed trait Statement extends AstNode {
 		def initLabel : Int
 		def finalLabel: Set[Int]
+		def blocks: Set[Block]
 		def flow: Set[(Int, Int)]
+		def reverseFlow: Set[(Int, Int)] = flow.map { case (l1, l2) => (l2, l1) }
 	}
 
-	case class Block(statements: List[Statement]) extends Statement {
+	case class Seq(statements: List[Statement]) extends Statement {
 		override def children = statements
 		override def pp = s"{\n${statements.map(_.pp).mkString("\n")}\n}^$label"
 
@@ -64,8 +68,8 @@ object AST {
 		 * @return
 		 */
 		override def initLabel = statements.head.label
-
 		override def finalLabel = statements.last.finalLabel
+		override def blocks = statements.map(_.blocks).reduce(_ ++ _)
 		override def flow = {
 			val stmtsFlows = statements.map(_.flow).reduce(_ ++ _)
 			val seqFlow = for(s <- statements.sliding(2)) yield {
@@ -85,6 +89,7 @@ object AST {
 		override def children = List(conditional, stmt)
 		override def initLabel = conditional.label
 		override def finalLabel = Set(conditional.label)
+		override def blocks = stmt.blocks + conditional
 		override def flow = {
 			val backFlow = for(l <- stmt.finalLabel) yield (l, conditional.label)
 			stmt.flow ++ backFlow.+((conditional.label, stmt.initLabel))
@@ -93,11 +98,12 @@ object AST {
 		override def pp = s"while^$label(${conditional.pp})\n${stmt.pp}"
 	}
 
-	case class Assig(ref: String, exp: AExp) extends Statement {
+	case class Assig(ref: String, exp: AExp) extends Statement with Block {
 		override def children = List(exp)
 		override def pp = s"$ref :=^$label ${exp.pp}"
 		override def initLabel = label
 		override def finalLabel = Set(label)
+		override def blocks = Set(this)
 		override def flow = Set()
 	}
 
@@ -105,6 +111,7 @@ object AST {
 		override def children = List(condition, s1, s2)
 		override def initLabel = condition.label
 		override def finalLabel: Set[Int] = s1.finalLabel ++ s2.finalLabel
+		override def blocks = s1.blocks ++ s2.blocks + condition
 		override def flow = {
 			s1.flow ++ s2.flow ++ Set((condition.label, s1.initLabel), (condition.label, s2.initLabel))
 				.+((label, condition.label)) // Idem as with a Block
@@ -112,10 +119,11 @@ object AST {
 		override def pp = s"if^$label(${condition.pp})\n${s1.pp}\nelse\n${s2.pp}"
 	}
 
-	case class Skip() extends Statement {
+	case class Skip() extends Statement with Block {
 		override def children = Nil
 		override def initLabel = label
 		override def finalLabel: Set[Int] = Set(label)
+		override def blocks = Set(this)
 		override def flow = Set()
 		override def pp = s"skip^$label"
 	}

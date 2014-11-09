@@ -1,3 +1,4 @@
+import analyzer.Flow
 import parser.WhileParser
 
 object Main {
@@ -15,5 +16,6 @@ object Main {
 		Flow.labelNodes(prog)
 		println(prog.pp)
 		println(prog.flow)
+		println(prog.reverseFlow)
 	}
 }

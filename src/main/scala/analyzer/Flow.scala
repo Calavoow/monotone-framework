@@ -1,3 +1,5 @@
+package analyzer
+
 import parser.AST._
 
 object Flow {
@@ -15,9 +17,5 @@ object Flow {
 		node.children.foldLeft(newCounter)( (currentCounter, node) => {
 			labelNodes(node, currentCounter)
 		})
-	}
-
-	def flow(node: AstNode) : Map[Statement, Set[(Int, Int)]] = node match {
-		case _ => Map()
 	}
 }
