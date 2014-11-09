@@ -4,7 +4,7 @@ import org.scalatest.{FlatSpec, Matchers}
 import parser.AST._
 import parser.WhileParser
 
-class MonotoneSpec extends FlatSpec with Matchers{
+class AnalysesSpec extends FlatSpec with Matchers{
 
 	def allLabelsEqual(in: AstNode, expected: AstNode) {
 		(in, expected) match {
@@ -19,7 +19,7 @@ class MonotoneSpec extends FlatSpec with Matchers{
 
 	"labelNodes" should "label a simple assignment correctly" in {
 		val ast = Assig("a", INT(2))
-		val labeledAst = Monotone.labelNodes(ast)
+		val labeledAst = Analyses.labelNodes(ast)
 
 		val expected = Assig("a", INT(2))
 		expected.label = 0
@@ -30,7 +30,7 @@ class MonotoneSpec extends FlatSpec with Matchers{
 	"flow calculation" should "give a correct flow set for an if-else" in {
 		// If(1 < 2) x:=1 else x:=2
 		val ast = IfElse(RelationalExp("<", INT(1), INT(2)), Assig("x", INT(1)), Assig("x", INT(2)))
-		Monotone.labelNodes(ast)
+		Analyses.labelNodes(ast)
 		val expected = Set(
 			(0,1) // conditional -> stmt 1
 			,(0,2) // conditional -> stmt 2
@@ -50,7 +50,7 @@ class MonotoneSpec extends FlatSpec with Matchers{
 
 	"available expresssion" should "analyze an assignment" in {
 		val ast = Assig("x", BinOp("+", Ref("a"), INT(1)))
-		Monotone.labelNodes(ast)
+		Analyses.labelNodes(ast)
 		val expectedIn = List(
 			Set[BinOp]()
 		)
@@ -58,7 +58,7 @@ class MonotoneSpec extends FlatSpec with Matchers{
 			Set(BinOp("+", Ref("a"), INT(1)))
 		)
 
-		val (in, out) = Monotone.aExp(ast)
+		val (in, out) = Analyses.aExp(ast)
 		in should equal(expectedIn)
 		out should equal(expectedOut)
 	}
@@ -67,7 +67,7 @@ class MonotoneSpec extends FlatSpec with Matchers{
 		//Note: assume correct parse (checked manually)
 		val program = "{x:= a+b y:=a*b while(y>a+b) {a:=a+1 x:=a+b}}"
 		val ast = WhileParser.parseAll(WhileParser.statement, program).get
-		Monotone.labelNodes(ast)
+		Analyses.labelNodes(ast)
 
 		val expectedIn = List(
 			Set[BinOp]()
@@ -83,10 +83,7 @@ class MonotoneSpec extends FlatSpec with Matchers{
 			, Set[BinOp]()
 			, Set(BinOp("+", Ref("a"), Ref("b")))
 		)
-		val(in, out) = Monotone.aExp(ast)
-
-		println(in)
-		println(out)
+		val(in, out) = Analyses.aExp(ast)
 
 		in should equal(expectedIn)
 		out should equal(expectedOut)
@@ -94,7 +91,7 @@ class MonotoneSpec extends FlatSpec with Matchers{
 
 	"Reaching definitions" should "analyze an assignment" in {
 		val ast = Assig("x", BinOp("+", Ref("a"), INT(1)))
-		Monotone.labelNodes(ast)
+		Analyses.labelNodes(ast)
 		val expectedIn = List(
 			Set(("a", -1)) // Only a occurs as a FreeVar
 		)
@@ -102,7 +99,7 @@ class MonotoneSpec extends FlatSpec with Matchers{
 			Set(("x", 0), ("a", -1)) // x is set at label 0
 		)
 
-		val (in, out) = Monotone.rDef(ast)
+		val (in, out) = Analyses.rDef(ast)
 		in should equal(expectedIn)
 		out should equal(expectedOut)
 	}
@@ -110,7 +107,7 @@ class MonotoneSpec extends FlatSpec with Matchers{
 	it should "analyze example 2.7" in {
 		val program = "{x:=5 y:=1 while(x>1){y:=x*y x:=x-1}}"
 		val ast = WhileParser.parseAll(WhileParser.statement, program).get
-		Monotone.labelNodes(ast)
+		Analyses.labelNodes(ast)
 
 		val expectedIn = List(
 			Set(("x", -1),("y", -1))
@@ -127,7 +124,7 @@ class MonotoneSpec extends FlatSpec with Matchers{
 			, Set(("y", 3),("x", 4))
 		)
 
-		val (in, out) = Monotone.rDef(ast)
+		val (in, out) = Analyses.rDef(ast)
 		in should equal(expectedIn)
 		out should equal(expectedOut)
 	}
