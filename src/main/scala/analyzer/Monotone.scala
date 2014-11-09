@@ -52,7 +52,7 @@ object Monotone {
 	        ,F: Set[(Int, Int)]
 	        ,E: Set[Int]
 	        ,iota: (L, L)
-	        ,f: L => L): Seq[L] = {
+	        ,f: (Int, L) => L): (Seq[L], Seq[L]) = {
 		// Step 1: Initialisation of W and analysis
 		// Sort labels from small to large.
 		var W = F.toList.sorted
@@ -64,36 +64,79 @@ object Monotone {
 		while(W.nonEmpty) {
 			val (l, m) = W.head
 			W = W.tail
-			val fResult = f(analysis(l))
+			val fResult = f(l, analysis(l))
 			if(!partialOrd(fResult, analysis(m))) {
 				analysis(m) = lub(analysis(m), fResult)
 				for(followLabel <- F if followLabel._1 == m) W = followLabel :: W
 			}
 		}
 
-		analysis
+		// Return MFP_in and MFP_out
+		val MFP_out = analysis.zipWithIndex.map { case (analysisResult, label) => f(label, analysis(label)) }
+		(analysis, MFP_out)
 	}
 
 	def aExp(program: Statement) : Set[Exp] = {
-		type L = Exp
-		val lub = (s1: Set[L], s2: Set[L]) => s1.intersect(s2)
+		type L = Set[BinOp]
+
+		val labelMap = labelToNode(program)
+		println(labelMap)
+
+		// s1 intersect s2
+		val lub = (s1: L, s2: L) => s1 intersect s2
+
+		// l1 superset l2
+		def partialOrd(l1: L, l2: L): Boolean = {
+			l2.subsetOf(l1)
+		}
+
 		val F = program.flow
 		val E = Set(program.initLabel)
 
-		def findAllAExp(node: AstNode) : Set[BinOp] = node match {
-			case b@BinOp(_, e1, e2) => findAllAExp(e1) ++ findAllAExp(e2) + b
-			case n => n.children.map(findAllAExp).reduce(_ ++ _)
+		// Calculate AExp_*
+		def findAExp(node: AstNode) : Set[BinOp] = node match {
+			case b@BinOp(_, e1, e2) => findAExp(e1) ++ findAExp(e2) + b
+			case n => n.children.map(findAExp).reduce(_ ++ _)
 		}
-		val aExpStar = findAllAExp(program)
+		val aExpStar = findAExp(program)
 
 		val iota = (Set(), aExpStar)
 
-		def f = ???
-		analysis(lub, F, E, iota, f)
+		def killAE(label: Int) : Set[BinOp] = {
+			val node = labelMap(label)
+			node match {
+				case Assig(x, exp) =>
+					for(aExp <- aExpStar if FV(aExp).contains(x)) yield aExp
+				case _ => Set()
+			}
+		}
+		def genAE(label: Int) : Set[BinOp] = {
+			val node = labelMap(label)
+			node match {
+				case Assig(x, exp) =>
+					for(aExp <- findAExp(exp) if !FV(aExp).contains(x)) yield aExp
+				case r@RelationalExp(op, e1, e2) => findAExp(r)
+				case _ => Set()
+			}
+		}
+
+		val f = f_l[BinOp](killAE, genAE)
+
+		MFP(lub, partialOrd, F, E, iota, f)
+	}
+
+	def f_l[T](kill: Int => Set[T], gen: Int => Set[T])(label: Int, currAnalysis: Set[T]) : Set[T] = {
+		(currAnalysis -- kill(label)) ++ gen(label)
 	}
 
 	def FV(exp: Exp) : Set[String] = exp match {
 		case Ref(v) => Set(v)
 		case _ => exp.children.map(FV).reduce(_ ++ _)
+	}
+
+	def labelToNode(root: AstNode): Map[Int, AstNode] = {
+		val entry = root.label -> root
+		val childrenMap = root.children.map(labelToNode).reduce(_ ++ _)
+		childrenMap + entry
 	}
 }

@@ -3,7 +3,7 @@ package analyzer
 import org.scalatest.{FlatSpec, Matchers}
 import parser.AST._
 
-class FlowSpec extends FlatSpec with Matchers{
+class MonotoneSpec extends FlatSpec with Matchers{
 
 	def allLabelsEqual(in: AstNode, expected: AstNode) {
 		println(in + " " + expected)
