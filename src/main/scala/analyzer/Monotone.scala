@@ -10,12 +10,11 @@ object Monotone {
 	 * @param node The node to label
 	 * @return
 	 */
-	def labelNodes(node: AstNode, counter: Int = 0) : Int = {
-		val newCounter = counter + 1
-		node.label = newCounter
+	def labelNodes(node: AstNode, counter: Int =  0) : Int = {
+		node.label = counter
 
 		// Then label all children of the node
-		node.children.foldLeft(newCounter)( (currentCounter, node) => {
+		node.children.foldLeft(counter + 1)( (currentCounter, node) => {
 			labelNodes(node, currentCounter)
 		})
 	}
@@ -56,9 +55,10 @@ object Monotone {
 		// Step 1: Initialisation of W and analysis
 		// Sort labels from small to large.
 		var W = F.toList.sorted
-		val numLabels = F.flatMap((el) => Set(el._1, el._2)).max
+		// Make sure that there is at least one element in the Set.
+		val numLabels = F.flatMap((el) => Set(el._1, el._2)).++(E).max + 1
 		val analysis = mutable.IndexedSeq.fill(numLabels)(iota._2)
-		for(l <- E) analysis(2) = iota._1
+		for(l <- E) analysis(l) = iota._1
 
 		// Step 2: Iteration, updating W and analysis
 		while(W.nonEmpty) {
@@ -76,11 +76,10 @@ object Monotone {
 		(analysis, MFP_out)
 	}
 
-	def aExp(program: Statement) : Set[Exp] = {
+	def aExp(program: Statement) : (Seq[Set[BinOp]], Seq[Set[BinOp]]) = {
 		type L = Set[BinOp]
 
 		val labelMap = labelToNode(program)
-		println(labelMap)
 
 		// s1 intersect s2
 		val lub = (s1: L, s2: L) => s1 intersect s2
@@ -96,11 +95,11 @@ object Monotone {
 		// Calculate AExp_*
 		def findAExp(node: AstNode) : Set[BinOp] = node match {
 			case b@BinOp(_, e1, e2) => findAExp(e1) ++ findAExp(e2) + b
-			case n => n.children.map(findAExp).reduce(_ ++ _)
+			case n => n.children.map(findAExp).foldLeft(Set[BinOp]())(_ ++ _)
 		}
 		val aExpStar = findAExp(program)
 
-		val iota = (Set(), aExpStar)
+		val iota = (Set[BinOp](), aExpStar)
 
 		def killAE(label: Int) : Set[BinOp] = {
 			val node = labelMap(label)
@@ -120,9 +119,9 @@ object Monotone {
 			}
 		}
 
-		val f = f_l[BinOp](killAE, genAE)
+		val f = f_l[BinOp](killAE, genAE) _
 
-		MFP(lub, partialOrd, F, E, iota, f)
+		MFP[L](lub, partialOrd, F, E, iota, f)
 	}
 
 	def f_l[T](kill: Int => Set[T], gen: Int => Set[T])(label: Int, currAnalysis: Set[T]) : Set[T] = {
@@ -131,12 +130,12 @@ object Monotone {
 
 	def FV(exp: Exp) : Set[String] = exp match {
 		case Ref(v) => Set(v)
-		case _ => exp.children.map(FV).reduce(_ ++ _)
+		case _ => exp.children.map(FV).foldLeft(Set[String]())(_ ++ _)
 	}
 
 	def labelToNode(root: AstNode): Map[Int, AstNode] = {
 		val entry = root.label -> root
-		val childrenMap = root.children.map(labelToNode).reduce(_ ++ _)
+		val childrenMap = root.children.map(labelToNode).foldLeft(Map[Int,AstNode]())(_ ++ _)
 		childrenMap + entry
 	}
 }

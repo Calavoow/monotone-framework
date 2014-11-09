@@ -71,7 +71,7 @@ object AST {
 		 * statements must be non-empty, because of the syntax.
 		 * @return
 		 */
-		override def initLabel = statements.head.label
+		override def initLabel = label
 		override def finalLabel = statements.last.finalLabel
 		override def blocks = statements.map(_.blocks).reduce(_ ++ _)
 		override def flow = {

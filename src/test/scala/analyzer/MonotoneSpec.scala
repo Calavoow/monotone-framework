@@ -2,6 +2,7 @@ package analyzer
 
 import org.scalatest.{FlatSpec, Matchers}
 import parser.AST._
+import parser.WhileParser
 
 class MonotoneSpec extends FlatSpec with Matchers{
 
@@ -44,5 +45,39 @@ class MonotoneSpec extends FlatSpec with Matchers{
 		)
 
 		ast.blocks should equal(expected)
+	}
+
+	"available expresssion" should "analyze an assignment" in {
+		val ast = Assig("x", BinOp("+", Ref("a"), INT(1)))
+		Monotone.labelNodes(ast)
+		val expectedIn = List(
+			Set[BinOp]()
+		)
+		val expectedOut = List(
+			Set(BinOp("+", Ref("a"), INT(1)))
+		)
+
+		val (in, out) = Monotone.aExp(ast)
+		in should equal(expectedIn)
+		out should equal(expectedOut)
+	}
+
+	it should "analyze the example 2.5" in {
+		//Note: assume correct parse (checked manually)
+		val program = "{x:= a+b y:=a*b while(y>a+b) {a:=a+1 x:=a+b}}"
+		val ast = WhileParser.parseAll(WhileParser.statement, program).get
+		Monotone.labelNodes(ast)
+		println(ast.pp)
+
+		val expectedIn = List(
+			Set[BinOp]()
+			, Set(BinOp("+", Ref("a"), Ref("b")))
+			, Set(BinOp("+", Ref("a"), Ref("b")))
+			, Set(BinOp("+", Ref("a"), Ref("b")))
+			, Set[BinOp]()
+		)
+		val(in, out) = Monotone.aExp(ast)
+
+		in should equal(expectedIn)
 	}
 }
