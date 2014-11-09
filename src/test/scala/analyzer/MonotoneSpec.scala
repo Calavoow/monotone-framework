@@ -7,8 +7,11 @@ import parser.WhileParser
 class MonotoneSpec extends FlatSpec with Matchers{
 
 	def allLabelsEqual(in: AstNode, expected: AstNode) {
-		println(in + " " + expected)
-		in.label should be(expected.label)
+		(in, expected) match {
+			case (x: LabeledNode, y: LabeledNode) =>
+				x.label should be(y.label)
+			case _ =>
+		}
 		in.children should have size(expected.children.size)
 		val children = in.children zip expected.children
 		children.foreach { case (c1, c2) => allLabelsEqual(c1, c2) }
@@ -19,8 +22,7 @@ class MonotoneSpec extends FlatSpec with Matchers{
 		val labeledAst = Monotone.labelNodes(ast)
 
 		val expected = Assig("a", INT(2))
-		expected.label = 1
-		expected.exp.label = 2
+		expected.label = 0
 
 		allLabelsEqual(ast, expected)
 	}
@@ -30,9 +32,8 @@ class MonotoneSpec extends FlatSpec with Matchers{
 		val ast = IfElse(RelationalExp("<", INT(1), INT(2)), Assig("x", INT(1)), Assig("x", INT(2)))
 		Monotone.labelNodes(ast)
 		val expected = Set(
-			(1,2) //If -> conditional
-			,(2,5) // conditional -> stmt 1
-			,(2,7) // conditional -> stmt 2
+			(0,1) // conditional -> stmt 1
+			,(0,2) // conditional -> stmt 2
 		)
 		ast.flow should equal(expected)
 	}
@@ -67,7 +68,6 @@ class MonotoneSpec extends FlatSpec with Matchers{
 		val program = "{x:= a+b y:=a*b while(y>a+b) {a:=a+1 x:=a+b}}"
 		val ast = WhileParser.parseAll(WhileParser.statement, program).get
 		Monotone.labelNodes(ast)
-		println(ast.pp)
 
 		val expectedIn = List(
 			Set[BinOp]()
@@ -76,8 +76,19 @@ class MonotoneSpec extends FlatSpec with Matchers{
 			, Set(BinOp("+", Ref("a"), Ref("b")))
 			, Set[BinOp]()
 		)
+		val expectedOut = List(
+			Set(BinOp("+", Ref("a"), Ref("b")))
+			, Set(BinOp("+", Ref("a"), Ref("b")), BinOp("*", Ref("a"), Ref("b")))
+			, Set(BinOp("+", Ref("a"), Ref("b")))
+			, Set[BinOp]()
+			, Set(BinOp("+", Ref("a"), Ref("b")))
+		)
 		val(in, out) = Monotone.aExp(ast)
 
+		println(in)
+		println(out)
+
 		in should equal(expectedIn)
+		out should equal(expectedOut)
 	}
 }

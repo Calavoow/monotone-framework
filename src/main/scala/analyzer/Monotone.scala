@@ -11,12 +11,16 @@ object Monotone {
 	 * @return
 	 */
 	def labelNodes(node: AstNode, counter: Int =  0) : Int = {
-		node.label = counter
-
-		// Then label all children of the node
-		node.children.foldLeft(counter + 1)( (currentCounter, node) => {
-			labelNodes(node, currentCounter)
-		})
+		node match {
+			case n: LabeledNode =>
+				n.label = counter
+				counter + 1
+			case _ =>
+				// Then label all children of the node
+				node.children.foldLeft(counter)( (currentCounter, node) => {
+					labelNodes(node, currentCounter)
+				})
+		}
 	}
 
 //	/**
@@ -133,9 +137,10 @@ object Monotone {
 		case _ => exp.children.map(FV).foldLeft(Set[String]())(_ ++ _)
 	}
 
-	def labelToNode(root: AstNode): Map[Int, AstNode] = {
-		val entry = root.label -> root
-		val childrenMap = root.children.map(labelToNode).foldLeft(Map[Int,AstNode]())(_ ++ _)
-		childrenMap + entry
+	def labelToNode(node: AstNode): Map[Int, AstNode] = {
+		node match {
+			case n: LabeledNode => Map(n.label -> n)
+			case _ => node.children.map(labelToNode).foldLeft(Map[Int,AstNode]())(_ ++ _)
+		}
 	}
 }

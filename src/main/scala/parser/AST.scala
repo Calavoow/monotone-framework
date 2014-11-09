@@ -3,18 +3,26 @@ package parser
 object AST {
 
 	sealed trait AstNode {
-		var label: Int = -1
 		def children : List[AstNode]
 		def pp: String
 	}
 
-	sealed trait Block
+	sealed trait LabeledNode extends AstNode {
+		var label = -1
+	}
+
+	sealed trait Block extends AstNode
 
 	sealed trait Exp extends AstNode {
 		def children: List[Exp]
 	}
 
-	sealed trait BExp extends Exp with Block
+	/**
+	 * The trait for binary expressions.
+	 *
+	 * These are all labeled, because any could occur as conditional in a Statement.
+	 */
+	sealed trait BExp extends Exp with Block with LabeledNode
 	case class True() extends BExp {
 		override def children = Nil
 		override def pp = s"true^$label"
@@ -39,15 +47,15 @@ object AST {
 	sealed trait AExp extends Exp
 	case class BinOp(operator: String, e1: AExp, e2: AExp) extends AExp {
 		override def children = List(e1, e2)
-		override def pp = s"BinOp($operator, ${e1.pp}, ${e2.pp})^$label"
+		override def pp = s"BinOp($operator, ${e1.pp}, ${e2.pp})"
 	}
 	case class INT(value: Int) extends AExp {
 		override def children = Nil
-		override def pp = s"INT($value)^$label"
+		override def pp = s"INT($value)"
 	}
 	case class Ref(id: String) extends AExp {
 		override def children = Nil
-		override def pp = s"Ref($id)^$label"
+		override def pp = s"Ref($id)"
 	}
 
 	/**
@@ -63,7 +71,7 @@ object AST {
 
 	case class Sequence(statements: List[Statement]) extends Statement {
 		override def children = statements
-		override def pp = s"{\n${statements.map(_.pp).mkString("\n")}\n}^$label"
+		override def pp = s"{\n${statements.map(_.pp).mkString("\n")}\n}"
 
 		/**
 		 * Returns the label of the head of the statements.
@@ -71,7 +79,7 @@ object AST {
 		 * statements must be non-empty, because of the syntax.
 		 * @return
 		 */
-		override def initLabel = label
+		override def initLabel = statements.head.initLabel
 		override def finalLabel = statements.last.finalLabel
 		override def blocks = statements.map(_.blocks).reduce(_ ++ _)
 		override def flow = {
@@ -83,9 +91,6 @@ object AST {
 			}
 
 			stmtsFlows ++ seqFlow.reduce(_ ++ _)
-				// Note that we also need to add a label for Block([x^j,y,z])^l, from l to j.
-				// This is different from the book because there a Block does not have a label.
-				.+((label, statements.head.label))
 		}
 	}
 
@@ -97,14 +102,13 @@ object AST {
 		override def flow = {
 			val backFlow = for(l <- stmt.finalLabel) yield (l, conditional.label)
 			stmt.flow ++ backFlow.+((conditional.label, stmt.initLabel))
-				.+((label, conditional.label)) // Idem as with a Block
 		}
-		override def pp = s"while^$label(${conditional.pp})\n${stmt.pp}"
+		override def pp = s"while(${conditional.pp})\n${stmt.pp}"
 	}
 
-	case class Assig(ref: String, exp: AExp) extends Statement with Block {
+	case class Assig(ref: String, exp: AExp) extends Statement with Block with LabeledNode {
 		override def children = List(exp)
-		override def pp = s"$ref :=^$label ${exp.pp}"
+		override def pp = s"[$ref := ${exp.pp}]^$label"
 		override def initLabel = label
 		override def finalLabel = Set(label)
 		override def blocks = Set(this)
@@ -118,12 +122,11 @@ object AST {
 		override def blocks = s1.blocks ++ s2.blocks + condition
 		override def flow = {
 			s1.flow ++ s2.flow ++ Set((condition.label, s1.initLabel), (condition.label, s2.initLabel))
-				.+((label, condition.label)) // Idem as with a Block
 		}
-		override def pp = s"if^$label(${condition.pp})\n${s1.pp}\nelse\n${s2.pp}"
+		override def pp = s"if(${condition.pp})\n${s1.pp}\nelse\n${s2.pp}"
 	}
 
-	case class Skip() extends Statement with Block {
+	case class Skip() extends Statement with Block with LabeledNode {
 		override def children = Nil
 		override def initLabel = label
 		override def finalLabel: Set[Int] = Set(label)
