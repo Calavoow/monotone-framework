@@ -2,10 +2,9 @@ import parser.{AstUtils, WhileParser}
 
 object Main {
 	def main(args: Array[String]) {
-        println(util.Properties.versionString)
-//		val toParse = "if true && true || false then x:=1 else { x:= 1 y:=2 }"
+//		val toParse = "begin if true && true || false then x:=1 else { x:= 1 y:=2 } end"
 		val toParse = "begin proc p(val x; res y) is y:=x end call p(x;y) end"
-//		val toParse = "{x:=1 y:=2}"
+//		val toParse = "begin {x:=1 y:=2} end"
 		val parsed = WhileParser.parseAll(WhileParser.program, toParse)
 		parsed match {
 			case WhileParser.Success(prog, _) => println(prog)
@@ -22,6 +21,5 @@ object Main {
 		println(prog.interFlow)
 
 		println(AstUtils.labelToNode(prog))
-
 	}
 }
