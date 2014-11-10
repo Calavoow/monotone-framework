@@ -1,7 +1,7 @@
 package analyzer
 
 import parser.AST._
-import parser.AstUtil
+import parser.AstUtils
 
 object Analyses {
 	/**
@@ -12,8 +12,8 @@ object Analyses {
 	def availableExpressions(program: Statement) : (Seq[Set[BinOp]], Seq[Set[BinOp]]) = {
 		type L = Set[BinOp]
 
-		val labelMap = AstUtil.labelToNode(program)
-		val procs = AstUtil.mapProcedures(program)
+		val labelMap = AstUtils.labelToNode(program)
+		val procs = AstUtils.mapProcedures(program)
 
 		// s1 intersect s2
 		val lub = (s1: L, s2: L) => s1 intersect s2
@@ -62,8 +62,8 @@ object Analyses {
 	def reachingDefinitions(program: Statement) : (Seq[Set[(String, Int)]], Seq[Set[(String, Int)]]) = {
 		type L = Set[(String, Int)]
 
-		val labelMap = AstUtil.labelToNode(program)
-		val procs = AstUtil.mapProcedures(program)
+		val labelMap = AstUtils.labelToNode(program)
+		val procs = AstUtils.mapProcedures(program)
 
 		// s1 union s2
 		val lub = (s1: L, s2: L) => s1 ++ s2
@@ -112,8 +112,8 @@ object Analyses {
 		type L = Set[BinOp]
 		val emptySet = Set[BinOp]()
 
-		val labelMap = AstUtil.labelToNode(program)
-		val procs = AstUtil.mapProcedures(program)
+		val labelMap = AstUtils.labelToNode(program)
+		val procs = AstUtils.mapProcedures(program)
 
 		// s1 intersect s2
 		val lub = (s1: L, s2: L) => s1 intersect s2
@@ -163,8 +163,8 @@ object Analyses {
 		type L = Set[String]
 		val emptySet = Set[String]()
 
-		val labelMap = AstUtil.labelToNode(program)
-		val procs = AstUtil.mapProcedures(program)
+		val labelMap = AstUtils.labelToNode(program)
+		val procs = AstUtils.mapProcedures(program)
 
 		// s1 union s2
 		val lub = (s1: L, s2: L) => s1 ++ s2

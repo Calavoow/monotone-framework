@@ -1,8 +1,8 @@
 package parser
 
-import AST._
+import parser.AST._
 
-object AstUtil {
+object AstUtils {
 
 	def mapProcedures(node: AstNode) : Map[String, Procedure] = node match {
 		case p@Procedure(name, _, _, _) => Map(name -> p)
