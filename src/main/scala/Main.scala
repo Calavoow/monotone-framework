@@ -1,11 +1,9 @@
-import analyzer.{Analyses, Monotone}
-import parser.AST.ProcFlow
 import parser.{AstUtil, WhileParser}
 
 object Main {
 	def main(args: Array[String]) {
         println(util.Properties.versionString)
-		val toParse = "if true && true || false thenx:=1 else { x:= 1 y:=2 }"
+		val toParse = "if true && true || false then x:=1 else { x:= 1 y:=2 }"
 //		val toParse = "{x:=1 y:=2}"
 		val parsed = WhileParser.parseAll(WhileParser.statement, toParse)
 		parsed match {

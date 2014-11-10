@@ -1,13 +1,17 @@
 package parser
 
+import parser.AST._
+
 import scala.util.parsing.combinator.{PackratParsers, RegexParsers}
-import AST._
 
 object WhileParser extends RegexParsers with PackratParsers {
 
 	override type Elem = Char
 
 	lazy val identifier: PackratParser[String] = """[a-zA-Z][a-zA-Z0-9]*""".r ^^ {_.toString}
+	lazy val identifierList: PackratParser[List[String]] = identifier ~ ("," ~> identifier).* ^^ {
+		case id ~ ids => id :: ids
+	}
 	lazy val integer: PackratParser[Int] = """(0|[1-9]\d*)""".r ^^ {_.toInt}
 
 	lazy val op_a: PackratParser[String] = """[\-\+\*]""".r ^^ {_.toString}
@@ -37,7 +41,7 @@ object WhileParser extends RegexParsers with PackratParsers {
 		bExp ~ op_b ~ binTerm ^^ {
 			case e1 ~ op ~ e2 => BinBExp(op, e1, e2)
 		}
-			| "not" ~> bExp ^^ {case e => Not(e)}
+			| "not " ~> bExp ^^ {case e => Not(e)}
 			| binTerm
 	)
 
@@ -52,7 +56,7 @@ object WhileParser extends RegexParsers with PackratParsers {
 	 */
 	lazy val statements : PackratParser[List[Statement]] = statement ~ statement.+ ^^ {case s1 ~ s2s => s1 +: s2s}
 	lazy val block : PackratParser[Statement] = "{" ~> statements <~ "}" ^^ {case l => Sequence(l)}
-	lazy val statement : PackratParser[Statement] = whileLoop | ifelse | assignment | skip | block
+	lazy val statement : PackratParser[Statement] = whileLoop | ifelse | assignment | skip | block | call
 
 	lazy val whileLoop : PackratParser[Statement] = ("while(" ~> bExp <~ ")" ) ~ statement ^^
 		{ case conditional ~ body => While(conditional, body) }
@@ -61,14 +65,21 @@ object WhileParser extends RegexParsers with PackratParsers {
 		case id ~ e => Assig(id, e)
 	}
 
-	lazy val ifelse : PackratParser[Statement] = ("if" ~> bExp) ~ ("then" ~> statement) ~ ("else" ~> statement) ^^ {
+	lazy val ifelse : PackratParser[Statement] = ("if " ~> bExp) ~ ("then " ~> statement) ~ ("else " ~> statement) ^^ {
 		case bexp ~ s1 ~ s2 => IfElse(bexp, s1, s2)
 	}
 
 	lazy val skip = "skip" ^^ {case _ => Skip()}
 
+	lazy val call: PackratParser[Call] = ("call " ~> identifier <~ "(") ~ identifierList ~ (";" ~> identifier <~ ")") ^^ {
+		case procName ~ arguments ~ result => Call(procName, arguments, result)
+	}
 
-	//TODO: Program Parser
-//	lazy val program : PackratParsers[Program] = ("begin" ~> procedures) ~ (statements <~ "end")
-//	lazy val procedures: PackratParsers[Procedure] = ("proc " ~> identifier <~ "(val ") ~ identifier.+ ~ (" res " ~> identifier) ~ (") is " ~> statement <~ " end")
+	lazy val program : PackratParser[Program] = ("begin " ~> procedure.*) ~ (statement <~ "end") ^^ {
+		case procs ~ stmt => Program(procs, stmt)
+	}
+	lazy val procedure: PackratParser[Procedure] =
+		("proc " ~> identifier <~ "(val ") ~ identifierList ~ (";" ~> "res " ~> identifier) ~ (") is " ~> statement <~ "end") ^^ {
+			case procName ~ variables ~ result ~ stmnt => Procedure(procName, variables, result, stmnt)
+		}
 }

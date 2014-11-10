@@ -1,7 +1,5 @@
 package parser
 
-import java.util.prefs.PreferenceChangeEvent
-
 object AST {
 
 	sealed trait AstNode {
@@ -158,9 +156,9 @@ object AST {
 		override def pp = s"[call $procedureName(${variables.mkString(",")}, $result)]^${entry.label}_${exit.label}}"
 	}
 
-	case class Program(procedures: List[Procedure], statements: List[Statement]) extends AstNode {
-		override def children = procedures ++ statements
-		override def pp = s"begin\n${procedures.map(_.pp).mkString("\n")}\n${statements.map(_.pp).mkString("\n")}\nend}"
+	case class Program(procedures: List[Procedure], statement: Statement) extends AstNode {
+		override def children = statement :: procedures
+		override def pp = s"begin\n${procedures.map(_.pp).mkString("\n")}\n${statement.pp}\nend}"
 	}
 
 	case class ProcedureCall() extends LabeledNode with Block {

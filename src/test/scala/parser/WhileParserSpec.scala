@@ -1,6 +1,6 @@
 package parser
 
-import org.scalatest.{FlatSpec, Matchers, FunSuite}
+import org.scalatest.{FlatSpec, Matchers}
 import parser.AST._
 
 class WhileParserSpec extends FlatSpec with Matchers {
@@ -42,6 +42,23 @@ class WhileParserSpec extends FlatSpec with Matchers {
 		val toParse = "{a:=1 b:=2}"
 		val expected = Sequence(List(Assig("a", INT(1)), Assig("b", INT(2))))
 		val parsed = WhileParser.parseAll(WhileParser.statement, toParse)
+
+		parsed.get should be (expected)
+	}
+
+	it should "parse a basic program" in {
+		val toParse = "begin a:=1 end"
+		val expected = Program(Nil, Assig("a", INT(1)))
+		val parsed = WhileParser.parseAll(WhileParser.program, toParse)
+
+		parsed.get should be (expected)
+	}
+
+	it should "parse a program with a procedure call" in {
+		val toParse = "begin proc p(val x; res y) is y:=x end call p(x;y) end"
+		val expected = Program(List(Procedure("p", List("x"), "y", Assig("y", Ref("x")))), Call("p", List("x"), "y"))
+		val parsed = WhileParser.parseAll(WhileParser.program, toParse)
+		println(parsed)
 
 		parsed.get should be (expected)
 	}
