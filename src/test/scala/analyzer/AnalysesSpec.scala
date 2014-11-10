@@ -7,7 +7,7 @@ import parser.{AstUtils, WhileParser}
 class AnalysesSpec extends FlatSpec with Matchers{
 
 	"Available Expresssions" should "analyze an assignment" in {
-		val ast = Assig("x", BinOp("+", Ref("a"), INT(1)))
+		val ast = Program(List(),Assig("x", BinOp("+", Ref("a"), INT(1))))
 		AstUtils.labelNodes(ast)
 		val expectedIn = List(
 			Set[BinOp]()
@@ -23,8 +23,8 @@ class AnalysesSpec extends FlatSpec with Matchers{
 
 	it should "analyze the example 2.5" in {
 		//Note: assume correct parse (checked manually)
-		val program = "{x:= a+b y:=a*b while(y>a+b) {a:=a+1 x:=a+b}}"
-		val ast = WhileParser.parseAll(WhileParser.statement, program).get
+		val program = "begin {x:= a+b y:=a*b while(y>a+b) {a:=a+1 x:=a+b}} end"
+		val ast = WhileParser.parseAll(WhileParser.program, program).get
 		AstUtils.labelNodes(ast)
 
 		val expectedIn = List(
@@ -47,8 +47,85 @@ class AnalysesSpec extends FlatSpec with Matchers{
 		out should equal(expectedOut)
 	}
 
+	it should "analyze a function call" in {
+		val ast = Program(
+			List(Procedure("p", List("x"), "y", Assig("y", Ref("x")))),
+			Sequence(List(
+				Assig("x", BinOp("+", Ref("a"), INT(1)))
+				,Call("p", List("x"), "y")
+			))
+		)
+		AstUtils.labelNodes(ast)
+		println(ast.pp)
+
+		val expectedIn = List(
+			Set(BinOp("+",Ref("a"),INT(1)))
+			, Set(BinOp("+",Ref("a"),INT(1)))
+			, Set(BinOp("+",Ref("a"),INT(1)))
+			, Set() // Only before the assignment there expression 'a+1' is not available.
+			, Set(BinOp("+",Ref("a"),INT(1)))
+			, Set(BinOp("+",Ref("a"),INT(1)))
+		)
+		val expectedOut = List(
+			Set(BinOp("+",Ref("a"),INT(1)))
+			, Set(BinOp("+",Ref("a"),INT(1)))
+			, Set(BinOp("+",Ref("a"),INT(1)))
+			, Set(BinOp("+",Ref("a"),INT(1)))
+			, Set(BinOp("+",Ref("a"),INT(1)))
+			, Set(BinOp("+",Ref("a"),INT(1)))
+		)
+
+		val (in, out) = Analyses.availableExpressions(ast)
+		in should equal(expectedIn)
+		out should equal(expectedOut)
+	}
+
+	it should "be a context-insensitive function call" in {
+		val ast = Program(
+			List(Procedure("p", List("x"), "y", Assig("y", Ref("x")))),
+			Sequence(List(
+				Assig("x", BinOp("+", Ref("a"), INT(1)))
+				, Call("p", List("x"), "y")
+				, Assig("a", BinOp("+", Ref("a"), INT(2)))
+				, Call("p", List("x"), "y")
+			))
+		)
+		AstUtils.labelNodes(ast)
+
+		// Even though the expression "a+1" should still be available after the first call p(x;y)
+		// By a context-insensitive analysis it will be the case that the outset of the procedure will become EmptySet,
+		// because of the conext of the second call, where a+1 is no long available.
+		// Thus the return label of the first call will also become EmptySet.
+		val expectedIn = List(
+			Set(),
+			Set(),
+			Set(),
+			Set(),
+			Set(BinOp("+",Ref("a"),INT(1))), // call p(x; y)^4
+			Set(), // call p(x; y)_5
+			Set(),
+			Set(),
+			Set()
+		)
+		val expectedOut = List(
+			Set(),
+			Set(),
+			Set(),
+			Set(BinOp("+",Ref("a"),INT(1))), // x := a + 1
+			Set(BinOp("+",Ref("a"),INT(1))), // call p(x;y)^4
+			Set(), // call p(x;y)_5
+			Set(),
+			Set(),
+			Set()
+		)
+
+		val (in, out) = Analyses.availableExpressions(ast)
+		in should equal(expectedIn)
+		out should equal(expectedOut)
+	}
+
 	"Reaching definitions" should "analyze an assignment" in {
-		val ast = Assig("x", BinOp("+", Ref("a"), INT(1)))
+		val ast = Program(List(),Assig("x", BinOp("+", Ref("a"), INT(1))))
 		AstUtils.labelNodes(ast)
 		val expectedIn = List(
 			Set(("a", -1)) // Only a occurs as a FreeVar
@@ -63,8 +140,8 @@ class AnalysesSpec extends FlatSpec with Matchers{
 	}
 
 	it should "analyze example 2.7" in {
-		val program = "{x:=5 y:=1 while(x>1){y:=x*y x:=x-1}}"
-		val ast = WhileParser.parseAll(WhileParser.statement, program).get
+		val program = "begin {x:=5 y:=1 while(x>1){y:=x*y x:=x-1}} end"
+		val ast = WhileParser.parseAll(WhileParser.program, program).get
 		AstUtils.labelNodes(ast)
 
 		val expectedIn = List(
@@ -88,7 +165,7 @@ class AnalysesSpec extends FlatSpec with Matchers{
 	}
 
 	"Very Busy" should "analyze an assignment" in {
-		val ast = Assig("x", BinOp("+", Ref("a"), INT(1)))
+		val ast = Program(List(),Assig("x", BinOp("+", Ref("a"), INT(1))))
 		AstUtils.labelNodes(ast)
 		val expectedIn = List(
 			Set(BinOp("+", Ref("a"), INT(1)))
@@ -104,8 +181,8 @@ class AnalysesSpec extends FlatSpec with Matchers{
 	}
 
 	it should "analyze example 2.9" in {
-		val program = "if a>b then {x:=b-a y:=a-b} else {y:=b-a x:=a-b}"
-		val ast = WhileParser.parseAll(WhileParser.statement, program).get
+		val program = "begin if a>b then {x:=b-a y:=a-b} else {y:=b-a x:=a-b} end"
+		val ast = WhileParser.parseAll(WhileParser.program, program).get
 		AstUtils.labelNodes(ast)
 
 		val expectedIn = List(
@@ -129,7 +206,7 @@ class AnalysesSpec extends FlatSpec with Matchers{
 	}
 
 	"Live Variables" should "analyze an assignment" in {
-		val ast = Assig("x", BinOp("+", Ref("a"), INT(1)))
+		val ast = Program(List(), Assig("x", BinOp("+", Ref("a"), INT(1))))
 		AstUtils.labelNodes(ast)
 		val expectedIn = List(
 			Set("a")
@@ -144,8 +221,8 @@ class AnalysesSpec extends FlatSpec with Matchers{
 	}
 
 	it should "analyze example 2.11" in {
-		val program = "{x:=2 y:=4 x:=1 if y>x then z:=y else z:=y*y x:=z}"
-		val ast = WhileParser.parseAll(WhileParser.statement, program).get
+		val program = "begin {x:=2 y:=4 x:=1 if y>x then z:=y else z:=y*y x:=z} end"
+		val ast = WhileParser.parseAll(WhileParser.program, program).get
 		AstUtils.labelNodes(ast)
 
 		val expectedIn = List(

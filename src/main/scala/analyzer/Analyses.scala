@@ -9,11 +9,10 @@ object Analyses {
 	 * @param program The program to analyse
 	 * @return
 	 */
-	def availableExpressions(program: Statement) : (Seq[Set[BinOp]], Seq[Set[BinOp]]) = {
+	def availableExpressions(program: Program) : (Seq[Set[BinOp]], Seq[Set[BinOp]]) = {
 		type L = Set[BinOp]
 
 		val labelMap = AstUtils.labelToNode(program)
-		val procs = AstUtils.mapProcedures(program)
 
 		// s1 intersect s2
 		val lub = (s1: L, s2: L) => s1 intersect s2
@@ -23,8 +22,8 @@ object Analyses {
 			l2.subsetOf(l1)
 		}
 
-		val F = program.flow(procs)
-		val E = Set(program.initLabel)
+		val F = program.flow
+		val E = Set(program.statement.initLabel)
 
 		// Calculate AExp_*
 		val aExpStar = findAExp(program)
@@ -59,11 +58,10 @@ object Analyses {
 	 * @param program The program to analyse
 	 * @return
 	 */
-	def reachingDefinitions(program: Statement) : (Seq[Set[(String, Int)]], Seq[Set[(String, Int)]]) = {
+	def reachingDefinitions(program: Program) : (Seq[Set[(String, Int)]], Seq[Set[(String, Int)]]) = {
 		type L = Set[(String, Int)]
 
 		val labelMap = AstUtils.labelToNode(program)
-		val procs = AstUtils.mapProcedures(program)
 
 		// s1 union s2
 		val lub = (s1: L, s2: L) => s1 ++ s2
@@ -73,8 +71,8 @@ object Analyses {
 			l1.subsetOf(l2)
 		}
 
-		val F = program.flow(procs)
-		val E = Set(program.initLabel)
+		val F = program.flow
+		val E = Set(program.statement.initLabel)
 
 		val iota = (FV(program).map((_, -1)), Set[(String, Int)]())
 
@@ -108,12 +106,11 @@ object Analyses {
 	 * @param program The program to analyse
 	 * @return
 	 */
-	def veryBusy(program: Statement) : (Seq[Set[BinOp]], Seq[Set[BinOp]]) = {
+	def veryBusy(program: Program) : (Seq[Set[BinOp]], Seq[Set[BinOp]]) = {
 		type L = Set[BinOp]
 		val emptySet = Set[BinOp]()
 
 		val labelMap = AstUtils.labelToNode(program)
-		val procs = AstUtils.mapProcedures(program)
 
 		// s1 intersect s2
 		val lub = (s1: L, s2: L) => s1 intersect s2
@@ -123,8 +120,8 @@ object Analyses {
 			l2.subsetOf(l1)
 		}
 
-		val F = program.reverseFlow(procs)
-		val E = program.finalLabel
+		val F = program.reverseFlow
+		val E = program.statement.finalLabel
 
 		val aExpStar = findAExp(program)
 		val iota = (emptySet, aExpStar)
@@ -159,12 +156,11 @@ object Analyses {
 	 * @param program The program to analyse
 	 * @return
 	 */
-	def liveVariables(program: Statement) : (Seq[Set[String]], Seq[Set[String]]) = {
+	def liveVariables(program: Program) : (Seq[Set[String]], Seq[Set[String]]) = {
 		type L = Set[String]
 		val emptySet = Set[String]()
 
 		val labelMap = AstUtils.labelToNode(program)
-		val procs = AstUtils.mapProcedures(program)
 
 		// s1 union s2
 		val lub = (s1: L, s2: L) => s1 ++ s2
@@ -174,8 +170,8 @@ object Analyses {
 			l1.subsetOf(l2)
 		}
 
-		val F = program.reverseFlow(procs)
-		val E = program.finalLabel
+		val F = program.reverseFlow
+		val E = program.statement.finalLabel
 
 		val iota = (emptySet, emptySet)
 

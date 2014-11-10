@@ -4,7 +4,7 @@ import scala.collection.mutable
 
 object Monotone {
 	/**
-	 * The Most Fixed Point calculates various program analyses according to the Monotone Framework.
+	 * The Maximal Fixed Point algorithm (MFP) calculates various program analyses according to the Monotone Framework.
 	 * @param lub The Least Upper Bound function ⊔
 	 * @param partialOrd A partial ordering ⊑
 	 * @param F The program flow. Either forward or reverse flow.
