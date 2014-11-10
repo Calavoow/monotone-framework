@@ -1,5 +1,7 @@
 package parser
 
+import java.util.prefs.PreferenceChangeEvent
+
 object AST {
 
 	sealed trait AstNode {
@@ -70,8 +72,8 @@ object AST {
 		def initLabel : Int
 		def finalLabel: Set[Int]
 		def blocks: Set[Block]
-		def flow: Set[(Int, Int)]
-		def reverseFlow: Set[(Int, Int)] = flow.map { case (l1, l2) => (l2, l1) }
+		def flow(procs: Map[String, Procedure]): Set[(Int, Int)]
+		def reverseFlow(procs: Map[String, Procedure]): Set[(Int, Int)] = flow(procs).map { case (l1, l2) => (l2, l1) }
 	}
 
 	case class Sequence(statements: List[Statement]) extends Statement {
@@ -87,8 +89,8 @@ object AST {
 		override def initLabel = statements.head.initLabel
 		override def finalLabel = statements.last.finalLabel
 		override def blocks = statements.map(_.blocks).reduce(_ ++ _)
-		override def flow = {
-			val stmtsFlows = statements.map(_.flow).reduce(_ ++ _)
+		override def flow(procs: Map[String, Procedure]) = {
+			val stmtsFlows = statements.map(_.flow(procs)).reduce(_ ++ _)
 			val seqFlow = for(s <- statements.sliding(2)) yield {
 				s match {
 					case List(s1, s2) => s1.finalLabel.map((_, s2.initLabel))
@@ -104,9 +106,9 @@ object AST {
 		override def initLabel = conditional.label
 		override def finalLabel = Set(conditional.label)
 		override def blocks = stmt.blocks + conditional
-		override def flow = {
+		override def flow(procs: Map[String, Procedure]) = {
 			val backFlow = for(l <- stmt.finalLabel) yield (l, conditional.label)
-			stmt.flow ++ backFlow.+((conditional.label, stmt.initLabel))
+			stmt.flow(procs) ++ backFlow.+((conditional.label, stmt.initLabel))
 		}
 		override def pp = s"while(${conditional.pp})\n${stmt.pp}"
 	}
@@ -117,7 +119,7 @@ object AST {
 		override def initLabel = label
 		override def finalLabel = Set(label)
 		override def blocks = Set(this)
-		override def flow = Set()
+		override def flow(procs: Map[String, Procedure]) = Set()
 	}
 
 	case class IfElse(condition: BExp, s1: Statement, s2: Statement) extends Statement {
@@ -125,8 +127,8 @@ object AST {
 		override def initLabel = condition.label
 		override def finalLabel: Set[Int] = s1.finalLabel ++ s2.finalLabel
 		override def blocks = s1.blocks ++ s2.blocks + condition
-		override def flow = {
-			s1.flow ++ s2.flow ++ Set((condition.label, s1.initLabel), (condition.label, s2.initLabel))
+		override def flow(procs: Map[String, Procedure]) = {
+			s1.flow(procs) ++ s2.flow(procs) ++ Set((condition.label, s1.initLabel), (condition.label, s2.initLabel))
 		}
 		override def pp = s"if(${condition.pp})\n${s1.pp}\nelse\n${s2.pp}"
 	}
@@ -136,7 +138,59 @@ object AST {
 		override def initLabel = label
 		override def finalLabel: Set[Int] = Set(label)
 		override def blocks = Set(this)
-		override def flow = Set()
+		override def flow(procs: Map[String, Procedure]) = Set()
 		override def pp = s"skip^$label"
 	}
+
+	case class Call(procedureName: String, variables: List[String], result: String) extends Statement with Block {
+		val entry = ProcedureCall()
+		val exit = ProcedureCall()
+		override def initLabel = entry.label
+		override def finalLabel = Set(exit.label)
+		override def blocks = Set(this)
+		override def flow(procs: Map[String, Procedure]) = {
+			procs(procedureName) match {
+				case p@Procedure(_, _, _, _) => Set(ProcFlow(entry.label, p.entry.label), ProcFlow(p.exit.label, exit.label))
+				case _ => throw new RuntimeException(s"No matching procedure found for ${this.pp}")
+			}
+		}
+		override def children = List(entry, exit)
+		override def pp = s"[call $procedureName(${variables.mkString(",")}, $result)]^${entry.label}_${exit.label}}"
+	}
+
+	case class Program(procedures: List[Procedure], statements: List[Statement]) extends AstNode {
+		override def children = procedures ++ statements
+		override def pp = s"begin\n${procedures.map(_.pp).mkString("\n")}\n${statements.map(_.pp).mkString("\n")}\nend}"
+	}
+
+	case class ProcedureCall() extends LabeledNode with Block {
+		def children = Nil
+		def pp = s"ProcedureCall()^$label"
+	}
+
+	case class Procedure(name: String, variables: List[String], result: String, statement: Statement) extends Statement {
+		val entry = ProcedureCall()
+		val exit = ProcedureCall()
+		override def children = List(entry, statement, exit)
+		override def pp = s"proc $name(val ${variables.mkString(",")}, res $result) in^${entry.label}\n${statement.pp}\nend^${exit.label}"
+
+		override def initLabel = entry.label
+		override def finalLabel = Set(exit.label)
+		override def flow(procs: Map[String, Procedure]) = {
+			statement.flow(procs).+((entry.label,statement.initLabel)) ++ statement.finalLabel.map((_, exit.label))
+		}
+		override def blocks = statement.blocks.+(entry).+(exit)
+	}
+
+
+	object ProcFlow{
+		def apply(s: Int, e: Int) = new ProcFlow(s,e)
+		def unapply(pf: ProcFlow): Option[(Int, Int)] = Some((pf.start, pf.end))
+	}
+	/**
+	 * Represents a special case of program flow. (start; end)
+	 * @param start The entry or exit label
+	 * @param end The entry or exit label
+	 */
+	class ProcFlow(val start: Int, val end: Int) extends Tuple2(start, end)
 }

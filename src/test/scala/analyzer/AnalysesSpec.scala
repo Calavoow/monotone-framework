@@ -2,7 +2,7 @@ package analyzer
 
 import org.scalatest.{FlatSpec, Matchers}
 import parser.AST._
-import parser.WhileParser
+import parser.{AstUtil, WhileParser}
 
 class AnalysesSpec extends FlatSpec with Matchers{
 
@@ -19,7 +19,7 @@ class AnalysesSpec extends FlatSpec with Matchers{
 
 	"labelNodes" should "label a simple assignment correctly" in {
 		val ast = Assig("a", INT(2))
-		val labeledAst = Analyses.labelNodes(ast)
+		val labeledAst = AstUtil.labelNodes(ast)
 
 		val expected = Assig("a", INT(2))
 		expected.label = 0
@@ -30,12 +30,12 @@ class AnalysesSpec extends FlatSpec with Matchers{
 	"flow calculation" should "give a correct flow set for an if-else" in {
 		// If(1 < 2) x:=1 else x:=2
 		val ast = IfElse(RelationalExp("<", INT(1), INT(2)), Assig("x", INT(1)), Assig("x", INT(2)))
-		Analyses.labelNodes(ast)
+		AstUtil.labelNodes(ast)
 		val expected = Set(
 			(0,1) // conditional -> stmt 1
 			,(0,2) // conditional -> stmt 2
 		)
-		ast.flow should equal(expected)
+		ast.flow(Map()) should equal(expected)
 	}
 
 	"blocks" should "calculate blocks for a while" in {
@@ -50,7 +50,7 @@ class AnalysesSpec extends FlatSpec with Matchers{
 
 	"Available Expresssions" should "analyze an assignment" in {
 		val ast = Assig("x", BinOp("+", Ref("a"), INT(1)))
-		Analyses.labelNodes(ast)
+		AstUtil.labelNodes(ast)
 		val expectedIn = List(
 			Set[BinOp]()
 		)
@@ -67,7 +67,7 @@ class AnalysesSpec extends FlatSpec with Matchers{
 		//Note: assume correct parse (checked manually)
 		val program = "{x:= a+b y:=a*b while(y>a+b) {a:=a+1 x:=a+b}}"
 		val ast = WhileParser.parseAll(WhileParser.statement, program).get
-		Analyses.labelNodes(ast)
+		AstUtil.labelNodes(ast)
 
 		val expectedIn = List(
 			Set[BinOp]()
@@ -91,7 +91,7 @@ class AnalysesSpec extends FlatSpec with Matchers{
 
 	"Reaching definitions" should "analyze an assignment" in {
 		val ast = Assig("x", BinOp("+", Ref("a"), INT(1)))
-		Analyses.labelNodes(ast)
+		AstUtil.labelNodes(ast)
 		val expectedIn = List(
 			Set(("a", -1)) // Only a occurs as a FreeVar
 		)
@@ -107,7 +107,7 @@ class AnalysesSpec extends FlatSpec with Matchers{
 	it should "analyze example 2.7" in {
 		val program = "{x:=5 y:=1 while(x>1){y:=x*y x:=x-1}}"
 		val ast = WhileParser.parseAll(WhileParser.statement, program).get
-		Analyses.labelNodes(ast)
+		AstUtil.labelNodes(ast)
 
 		val expectedIn = List(
 			Set(("x", -1),("y", -1))
@@ -131,7 +131,7 @@ class AnalysesSpec extends FlatSpec with Matchers{
 
 	"Very Busy" should "analyze an assignment" in {
 		val ast = Assig("x", BinOp("+", Ref("a"), INT(1)))
-		Analyses.labelNodes(ast)
+		AstUtil.labelNodes(ast)
 		val expectedIn = List(
 			Set(BinOp("+", Ref("a"), INT(1)))
 		)
@@ -148,7 +148,7 @@ class AnalysesSpec extends FlatSpec with Matchers{
 	it should "analyze example 2.9" in {
 		val program = "if a>b then {x:=b-a y:=a-b} else {y:=b-a x:=a-b}"
 		val ast = WhileParser.parseAll(WhileParser.statement, program).get
-		Analyses.labelNodes(ast)
+		AstUtil.labelNodes(ast)
 
 		val expectedIn = List(
 			Set(BinOp("-", Ref("a"), Ref("b")), BinOp("-", Ref("b"), Ref("a")))
@@ -172,7 +172,7 @@ class AnalysesSpec extends FlatSpec with Matchers{
 
 	"Live Variables" should "analyze an assignment" in {
 		val ast = Assig("x", BinOp("+", Ref("a"), INT(1)))
-		Analyses.labelNodes(ast)
+		AstUtil.labelNodes(ast)
 		val expectedIn = List(
 			Set("a")
 		)
@@ -188,7 +188,7 @@ class AnalysesSpec extends FlatSpec with Matchers{
 	it should "analyze example 2.11" in {
 		val program = "{x:=2 y:=4 x:=1 if y>x then z:=y else z:=y*y x:=z}"
 		val ast = WhileParser.parseAll(WhileParser.statement, program).get
-		Analyses.labelNodes(ast)
+		AstUtil.labelNodes(ast)
 
 		val expectedIn = List(
 			Set()

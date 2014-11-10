@@ -66,4 +66,9 @@ object WhileParser extends RegexParsers with PackratParsers {
 	}
 
 	lazy val skip = "skip" ^^ {case _ => Skip()}
+
+
+	//TODO: Program Parser
+//	lazy val program : PackratParsers[Program] = ("begin" ~> procedures) ~ (statements <~ "end")
+//	lazy val procedures: PackratParsers[Procedure] = ("proc " ~> identifier <~ "(val ") ~ identifier.+ ~ (" res " ~> identifier) ~ (") is " ~> statement <~ " end")
 }

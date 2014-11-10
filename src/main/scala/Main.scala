@@ -1,10 +1,11 @@
 import analyzer.{Analyses, Monotone}
-import parser.WhileParser
+import parser.AST.ProcFlow
+import parser.{AstUtil, WhileParser}
 
 object Main {
 	def main(args: Array[String]) {
         println(util.Properties.versionString)
-		val toParse = "if true && true || false then x:=1 else { x:= 1 y:=2 }"
+		val toParse = "if true && true || false thenx:=1 else { x:= 1 y:=2 }"
 //		val toParse = "{x:=1 y:=2}"
 		val parsed = WhileParser.parseAll(WhileParser.statement, toParse)
 		parsed match {
@@ -13,11 +14,14 @@ object Main {
 		}
 
 		val prog = parsed.get
-		Analyses.labelNodes(prog)
+		AstUtil.labelNodes(prog)
+		val procs = AstUtil.mapProcedures(prog)
+		println(procs)
 		println(prog.pp)
-		println(prog.flow)
-		println(prog.reverseFlow)
+		println(prog.flow(procs))
+		println(prog.reverseFlow(procs))
 
-		println(Analyses.labelToNode(prog))
+		println(AstUtil.labelToNode(prog))
+
 	}
 }

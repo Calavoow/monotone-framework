@@ -1,6 +1,7 @@
 package analyzer
 
 import parser.AST._
+import parser.AstUtil
 
 object Analyses {
 	/**
@@ -11,7 +12,8 @@ object Analyses {
 	def availableExpressions(program: Statement) : (Seq[Set[BinOp]], Seq[Set[BinOp]]) = {
 		type L = Set[BinOp]
 
-		val labelMap = labelToNode(program)
+		val labelMap = AstUtil.labelToNode(program)
+		val procs = AstUtil.mapProcedures(program)
 
 		// s1 intersect s2
 		val lub = (s1: L, s2: L) => s1 intersect s2
@@ -21,7 +23,7 @@ object Analyses {
 			l2.subsetOf(l1)
 		}
 
-		val F = program.flow
+		val F = program.flow(procs)
 		val E = Set(program.initLabel)
 
 		// Calculate AExp_*
@@ -60,7 +62,8 @@ object Analyses {
 	def reachingDefinitions(program: Statement) : (Seq[Set[(String, Int)]], Seq[Set[(String, Int)]]) = {
 		type L = Set[(String, Int)]
 
-		val labelMap = labelToNode(program)
+		val labelMap = AstUtil.labelToNode(program)
+		val procs = AstUtil.mapProcedures(program)
 
 		// s1 union s2
 		val lub = (s1: L, s2: L) => s1 ++ s2
@@ -70,7 +73,7 @@ object Analyses {
 			l1.subsetOf(l2)
 		}
 
-		val F = program.flow
+		val F = program.flow(procs)
 		val E = Set(program.initLabel)
 
 		val iota = (FV(program).map((_, -1)), Set[(String, Int)]())
@@ -109,7 +112,8 @@ object Analyses {
 		type L = Set[BinOp]
 		val emptySet = Set[BinOp]()
 
-		val labelMap = labelToNode(program)
+		val labelMap = AstUtil.labelToNode(program)
+		val procs = AstUtil.mapProcedures(program)
 
 		// s1 intersect s2
 		val lub = (s1: L, s2: L) => s1 intersect s2
@@ -119,7 +123,7 @@ object Analyses {
 			l2.subsetOf(l1)
 		}
 
-		val F = program.reverseFlow
+		val F = program.reverseFlow(procs)
 		val E = program.finalLabel
 
 		val aExpStar = findAExp(program)
@@ -159,7 +163,8 @@ object Analyses {
 		type L = Set[String]
 		val emptySet = Set[String]()
 
-		val labelMap = labelToNode(program)
+		val labelMap = AstUtil.labelToNode(program)
+		val procs = AstUtil.mapProcedures(program)
 
 		// s1 union s2
 		val lub = (s1: L, s2: L) => s1 ++ s2
@@ -169,7 +174,7 @@ object Analyses {
 			l1.subsetOf(l2)
 		}
 
-		val F = program.reverseFlow
+		val F = program.reverseFlow(procs)
 		val E = program.finalLabel
 
 		val iota = (emptySet, emptySet)
@@ -221,37 +226,5 @@ object Analyses {
 	def FV(node: AstNode) : Set[String] = node match {
 		case Ref(v) => Set(v)
 		case _ => node.children.map(FV).foldLeft(Set[String]())(_ ++ _)
-	}
-
-	/**
-	 * Labels relevant nodes with a unique number top-down.
-	 *
-	 * Nodes are relevant when they have the LabeledNode trait.
-	 * @param node The AST node and all its children to label
-	 * @return A counter for the next (unique) label.
-	 */
-	def labelNodes(node: AstNode, counter: Int =  0) : Int = {
-		node match {
-			case n: LabeledNode =>
-				n.label = counter
-				counter + 1
-			case _ =>
-				// Then label all children of the node
-				node.children.foldLeft(counter)( (currentCounter, node) => {
-					labelNodes(node, currentCounter)
-				})
-		}
-	}
-
-	/**
-	 * labelToNode calculates a Map from label -> AST node.
-	 * @param node The node and all its children to analyze.
-	 * @return
-	 */
-	def labelToNode(node: AstNode): Map[Int, AstNode] = {
-		node match {
-			case n: LabeledNode => Map(n.label -> n)
-			case _ => node.children.map(labelToNode).foldLeft(Map[Int,AstNode]())(_ ++ _)
-		}
 	}
 }
