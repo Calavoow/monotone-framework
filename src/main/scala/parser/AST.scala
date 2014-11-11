@@ -73,6 +73,7 @@ object AST {
 		def flow(procs: Map[String, Procedure]): Set[(Int, Int)]
 		def reverseFlow(procs: Map[String, Procedure]): Set[(Int, Int)] = flow(procs).map { case (l1, l2) => (l2, l1) }
 		def interFlow(procs: Map[String, Procedure]) : Set[(Int, Int, Int, Int)]
+		def reverseInterFlow(procs: Map[String, Procedure]) : Set[(Int, Int, Int, Int)] = interFlow(procs).map { case (a,b,c,d) => (d,c,b,a) }
 	}
 
 	case class Sequence(statements: List[Statement]) extends Statement {
@@ -182,6 +183,7 @@ object AST {
 			val procs = AstUtils.mapProcedures(this)
 			children.map(_.interFlow(procs)).foldLeft(Set[(Int, Int, Int, Int)]())(_ ++ _)
 		}
+		def reverseInterFlow = interFlow.map { case (a,b,c,d) => (d,c,b,a) }
 	}
 
 	case class ProcedureCall() extends LabeledNode with Block {

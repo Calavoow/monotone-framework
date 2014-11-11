@@ -16,7 +16,7 @@ class AnalysesSpec extends FlatSpec with Matchers{
 			Set(BinOp("+", Ref("a"), INT(1)))
 		)
 
-		val (in, out) = Analyses.availableExpressions(ast)
+		val (in, out) = Analyses.availableExpressions(ast, 2)
 		in should equal(expectedIn)
 		out should equal(expectedOut)
 	}
@@ -41,7 +41,7 @@ class AnalysesSpec extends FlatSpec with Matchers{
 			, Set[BinOp]()
 			, Set(BinOp("+", Ref("a"), Ref("b")))
 		)
-		val(in, out) = Analyses.availableExpressions(ast)
+		val(in, out) = Analyses.availableExpressions(ast, 2)
 
 		in should equal(expectedIn)
 		out should equal(expectedOut)
@@ -56,7 +56,6 @@ class AnalysesSpec extends FlatSpec with Matchers{
 			))
 		)
 		AstUtils.labelNodes(ast)
-		println(ast.pp)
 
 		val expectedIn = List(
 			Set(BinOp("+",Ref("a"),INT(1)))
@@ -75,12 +74,12 @@ class AnalysesSpec extends FlatSpec with Matchers{
 			, Set(BinOp("+",Ref("a"),INT(1)))
 		)
 
-		val (in, out) = Analyses.availableExpressions(ast)
+		val (in, out) = Analyses.availableExpressions(ast, 2)
 		in should equal(expectedIn)
 		out should equal(expectedOut)
 	}
 
-	it should "be a context-insensitive function call" in {
+	it should "be a context-sensitive function call" in {
 		val ast = Program(
 			List(Procedure("p", List("x"), "y", Assig("y", Ref("x")))),
 			Sequence(List(
@@ -92,34 +91,32 @@ class AnalysesSpec extends FlatSpec with Matchers{
 		)
 		AstUtils.labelNodes(ast)
 
-		// Even though the expression "a+1" should still be available after the first call p(x;y)
-		// By a context-insensitive analysis it will be the case that the outset of the procedure will become EmptySet,
-		// because of the conext of the second call, where a+1 is no long available.
-		// Thus the return label of the first call will also become EmptySet.
 		val expectedIn = List(
-			Set(),
-			Set(),
-			Set(),
+			Set(BinOp("+",Ref("a"),INT(1)), BinOp("+", Ref("a"), INT(2))),
+			Set(BinOp("+",Ref("a"),INT(1)), BinOp("+", Ref("a"), INT(2))),
+			Set(BinOp("+",Ref("a"),INT(1)), BinOp("+", Ref("a"), INT(2))),
 			Set(),
 			Set(BinOp("+",Ref("a"),INT(1))), // call p(x; y)^4
-			Set(), // call p(x; y)_5
-			Set(),
+			Set(BinOp("+",Ref("a"),INT(1))), // call p(x; y)_5
+			Set(BinOp("+",Ref("a"),INT(1))),
 			Set(),
 			Set()
 		)
 		val expectedOut = List(
-			Set(),
-			Set(),
-			Set(),
+			Set(BinOp("+",Ref("a"),INT(1)), BinOp("+", Ref("a"), INT(2))),
+			Set(BinOp("+",Ref("a"),INT(1)), BinOp("+", Ref("a"), INT(2))),
+			Set(BinOp("+",Ref("a"),INT(1)), BinOp("+", Ref("a"), INT(2))),
 			Set(BinOp("+",Ref("a"),INT(1))), // x := a + 1
 			Set(BinOp("+",Ref("a"),INT(1))), // call p(x;y)^4
-			Set(), // call p(x;y)_5
+			Set(BinOp("+",Ref("a"),INT(1))), // call p(x;y)_5
 			Set(),
 			Set(),
 			Set()
 		)
 
-		val (in, out) = Analyses.availableExpressions(ast)
+
+		val (in, out) = Analyses.availableExpressions(ast, 2)
+		println(out)
 		in should equal(expectedIn)
 		out should equal(expectedOut)
 	}
@@ -134,7 +131,7 @@ class AnalysesSpec extends FlatSpec with Matchers{
 			Set(("x", 0), ("a", -1)) // x is set at label 0
 		)
 
-		val (in, out) = Analyses.reachingDefinitions(ast)
+		val (in, out) = Analyses.reachingDefinitions(ast, 2)
 		in should equal(expectedIn)
 		out should equal(expectedOut)
 	}
@@ -159,7 +156,7 @@ class AnalysesSpec extends FlatSpec with Matchers{
 			, Set(("y", 3),("x", 4))
 		)
 
-		val (in, out) = Analyses.reachingDefinitions(ast)
+		val (in, out) = Analyses.reachingDefinitions(ast, 2)
 		in should equal(expectedIn)
 		out should equal(expectedOut)
 	}
@@ -174,7 +171,7 @@ class AnalysesSpec extends FlatSpec with Matchers{
 			Set()
 		)
 
-		val (in, out) = Analyses.veryBusy(ast)
+		val (in, out) = Analyses.veryBusy(ast, 2)
 
 		in should equal(expectedIn)
 		out should equal(expectedOut)
@@ -199,7 +196,7 @@ class AnalysesSpec extends FlatSpec with Matchers{
 			, Set(BinOp("-", Ref("a"), Ref("b")))
 			, Set()
 		)
-		val(in, out) = Analyses.veryBusy(ast)
+		val(in, out) = Analyses.veryBusy(ast, 2)
 
 		in should equal(expectedIn)
 		out should equal(expectedOut)
@@ -215,7 +212,7 @@ class AnalysesSpec extends FlatSpec with Matchers{
 			Set()
 		)
 
-		val (in, out) = Analyses.liveVariables(ast)
+		val (in, out) = Analyses.liveVariables(ast, 2)
 		in should equal(expectedIn)
 		out should equal(expectedOut)
 	}
@@ -243,7 +240,7 @@ class AnalysesSpec extends FlatSpec with Matchers{
 			, Set("z")
 			, Set()
 		)
-		val(in, out) = Analyses.liveVariables(ast)
+		val(in, out) = Analyses.liveVariables(ast, 2)
 
 		in should equal(expectedIn)
 		out should equal(expectedOut)

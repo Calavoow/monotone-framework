@@ -9,7 +9,7 @@ object Analyses {
 	 * @param program The program to analyse
 	 * @return
 	 */
-	def availableExpressions(program: Program) : (Seq[Set[BinOp]], Seq[Set[BinOp]]) = {
+	def availableExpressions(program: Program, k: Int) : (Seq[Set[BinOp]], Seq[Set[BinOp]]) = {
 		type L = Set[BinOp]
 
 		val labelMap = AstUtils.labelToNode(program)
@@ -23,6 +23,7 @@ object Analyses {
 		}
 
 		val F = program.flow
+		val IF = program.interFlow
 		val E = Set(program.statement.initLabel)
 
 		// Calculate AExp_*
@@ -50,7 +51,7 @@ object Analyses {
 
 		val f = f_l[BinOp](killAE, genAE) _
 
-		Monotone.MFP[L](lub, partialOrd, F, E, iota, f)
+		Monotone.MFP[L](lub, partialOrd, F, IF, E, iota, f, k)
 	}
 
 	/**
@@ -58,7 +59,7 @@ object Analyses {
 	 * @param program The program to analyse
 	 * @return
 	 */
-	def reachingDefinitions(program: Program) : (Seq[Set[(String, Int)]], Seq[Set[(String, Int)]]) = {
+	def reachingDefinitions(program: Program, k: Int) : (Seq[Set[(String, Int)]], Seq[Set[(String, Int)]]) = {
 		type L = Set[(String, Int)]
 
 		val labelMap = AstUtils.labelToNode(program)
@@ -72,6 +73,7 @@ object Analyses {
 		}
 
 		val F = program.flow
+		val IF = program.interFlow
 		val E = Set(program.statement.initLabel)
 
 		val iota = (FV(program).map((_, -1)), Set[(String, Int)]())
@@ -98,7 +100,7 @@ object Analyses {
 
 		val f = f_l[(String, Int)](killRD, genRD) _
 
-		Monotone.MFP[L](lub, partialOrd, F, E, iota, f)
+		Monotone.MFP[L](lub, partialOrd, F, IF, E, iota, f, k)
 	}
 
 	/**
@@ -106,7 +108,7 @@ object Analyses {
 	 * @param program The program to analyse
 	 * @return
 	 */
-	def veryBusy(program: Program) : (Seq[Set[BinOp]], Seq[Set[BinOp]]) = {
+	def veryBusy(program: Program, k: Int) : (Seq[Set[BinOp]], Seq[Set[BinOp]]) = {
 		type L = Set[BinOp]
 		val emptySet = Set[BinOp]()
 
@@ -121,6 +123,7 @@ object Analyses {
 		}
 
 		val F = program.reverseFlow
+		val IF = program.reverseInterFlow
 		val E = program.statement.finalLabel
 
 		val aExpStar = findAExp(program)
@@ -147,7 +150,7 @@ object Analyses {
 		val f = f_l[BinOp](killVB, genVB) _
 
 		// Note: We have to switch in and out set, because of reversed flow.
-		val (mfp_in, mfp_out) = Monotone.MFP[L](lub, partialOrd, F, E, iota, f)
+		val (mfp_in, mfp_out) = Monotone.MFP[L](lub, partialOrd, F, IF, E, iota, f, k)
 		(mfp_out, mfp_in)
 	}
 
@@ -156,7 +159,7 @@ object Analyses {
 	 * @param program The program to analyse
 	 * @return
 	 */
-	def liveVariables(program: Program) : (Seq[Set[String]], Seq[Set[String]]) = {
+	def liveVariables(program: Program, k: Int) : (Seq[Set[String]], Seq[Set[String]]) = {
 		type L = Set[String]
 		val emptySet = Set[String]()
 
@@ -171,6 +174,7 @@ object Analyses {
 		}
 
 		val F = program.reverseFlow
+		val IF = program.reverseInterFlow
 		val E = program.statement.finalLabel
 
 		val iota = (emptySet, emptySet)
@@ -194,7 +198,7 @@ object Analyses {
 		val f = f_l[String](killLV, genLV) _
 
 		// Note: We have to switch in and out set, because of reversed flow.
-		val (mfp_in, mfp_out) = Monotone.MFP[L](lub, partialOrd, F, E, iota, f)
+		val (mfp_in, mfp_out) = Monotone.MFP[L](lub, partialOrd, F, IF, E, iota, f, k)
 		(mfp_out, mfp_in)
 	}
 
